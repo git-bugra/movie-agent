@@ -9,83 +9,93 @@ request=requests.get(f'http://www.omdbapi.com/?apikey={key}&i=tt0108052')
 '''
 
 class MovieAgent():
-    '''TBD'''
+    '''Main object. Carries data internally'''
     def __init__(self):
-        self.joinPath()
+        self.injectData()
         self.data=None
         self.condition=None
-        self.pathRead=False
 
-    def joinPath(self):
+    def injectData(self):
         '''Inject imdb data to program'''
-        title_imr=pl.Path(__file__).parent / 'data' / 'imdb.title.basics.tsv' #imr=id, metadata, rating
+        title_imr=pl.Path(__file__).parent / 'data' / 'imdb.title.ratings.tsv' #imr=id, metadata, rating
         title_basics=pl.Path(__file__).parent / 'data' / 'imdb.title.basics.tsv' #
-        self.pathAssign(title_basics)
+        title_basics_df=self.assignPath(title_basics)
+        title_imr_df=self.assignPath(title_imr)
+        self.mergeDataFrames(title_imr_df,title_basics_df) #insert df to be merged
         return self
 
-    def pathAssign(self, path: str):
+    def assignPath(self, path: str):
         '''Assign path to user selected dir'''
         path = pl.Path(path)
         try:
-            self.data = pd.read_csv(path, delimiter='\t')
-            self.pathRead=True
+            main = pd.read_csv(path, delimiter='\t') #Read file
         except Exception as e:
             raise IOError(f"Failed to read CSV: {e}") from e
-        print(self.data)
+        return main
+    
+    def mergeDataFrames(self,*args:pd.DataFrame):
+        '''Merge .tsv data files'''
+        result=args[0]
+        if len(args)>1:
+            for i in range(1,len(args)):
+                result=result.merge(args[i],on='tconst')
+        self.data=result
         return self
     
-    def conditionInject(self, *args:str):
+    def assignCondition(self, *args:str):
         '''Limit the data with given columns.
         
         *args: Names of the columns to limit'''
-        items=[]
-        for i in args:
-            items.append(i)
-        if len(items) != 0:self.condition=items
-        configureFile()
+        columns_to_limit=[*args]
+        if len(columns_to_limit)>1:self.condition=columns_to_limit
+        configureFile(self)
         return self
 
 def configureFile(movie_agent:MovieAgent):
     '''Based on condition, adjust the data to display'''
-    
-    if movie_agent.pathRead and movie_agent.condition:
+    if movie_agent and movie_agent.condition:
         movie_agent.data=movie_agent.data[movie_agent.condition]
-    elif movie_agent.pathRead:
-        pass
-        #movie_agent.data=movie_agent.data needless
-    else:
+    elif not movie_agent:
         raise ValueError(f'Failed to configure the file. MovieAgent.data: {movie_agent.data}')
     return movie_agent
 
-def extract():
+def configureAPI():
+    '''Pending'''
+
+def configureCLI():
+    '''Manipulate and communicate to the object and take actions via CLI commands.'''
+
+def genreFiltering():
     ''''''
 
 def recommendationLogic():
-    ''''''
+    '''
+    '''
 
 if __name__ == '__main__':
     main=MovieAgent()
 
     '''Initialize main callables and set data
             
-            -Fix path append method,
-            -Add limiting values internally,
+            -Add internal table configuration,
+            -Fix verbose and unecessary variables,
+            -
             
     TODO:   
             -Make program less concerete (imdb data needs downloaded somehow)
-            -Extract '''
+            -Sort the loaded movies with top ratings,
+            -Recommend the top n amount,
+            -Put previously loaded to memory,
+            -Load random top n amount, excluding previously loaded,
 
-    '''ask=True
-while True:
-    if ask:
-        print({'Title': "Schindler's List", 'Year': '1993', 'Rated': 'R', 'Released': '04 Feb 1994', 'Runtime': '195 min', 'Genre': 'Biography, Drama, History', 'Director': 'Steven Spielberg', 'Writer': 'Thomas Keneally, Steven Zaillian', 'Actors': 'Liam Neeson, Ralph Fiennes, Ben Kingsley', 'Plot': 'In German-occupied Poland during World War II, industrialist Oskar Schindler gradually becomes concerned for his Jewish workforce after witnessing their persecution by the Nazis.', 'Language': 'English, Hebrew, German, Polish, Latin', 'Country': 'United States', 'Awards': 'Won 7 Oscars. 91 wins & 49 nominations total', 'Poster': 'https://m.media-amazon.com/images/M/MV5BNjM1ZDQxYWUtMzQyZS00MTE1LWJmZGYtNGUyNTdlYjM3ZmVmXkEyXkFqcGc@._V1_SX300.jpg', 'Ratings': [{'Source': 'Internet Movie Database', 'Value': '9.0/10'}, {'Source': 'Rotten Tomatoes', 'Value': '98%'}, {'Source': 'Metacritic', 'Value': '95/100'}], 'Metascore': '95', 'imdbRating': '9.0', 'imdbVotes': '1,564,912', 'imdbID': 'tt0108052', 'Type': 'movie', 'DVD': 'N/A', 'BoxOffice': '$96,898,818', 'Production': 'N/A', 'Website': 'N/A', 'Response': 'True'})
-        ask=False
-    else:
-        pass
-    answer=input('Print again? Y/N')
-    if answer.lower() == 'y':
-        ask=True
-    else:
-        ask=False'''
+
+            
+    Current:
+    
+            -Load data files,
+            -Read .tsv files as pandas df object,
+            -Call on condition to limit the view of the df.'''
+
+    
 
 
