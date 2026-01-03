@@ -3,13 +3,15 @@ import random
 import json
 import pandas as pd
 import pathlib as pl
+import operator
 
 '''key=input('Enter OMDB API key\n')
 request=requests.get(f'http://www.omdbapi.com/?apikey={key}&i=tt0108052')
 '''
 
-class movieAgent():
-    '''Main object. Carries data internally'''
+class MovieAgent():
+    '''Main object responsible for clearing, fixing columns and internally consume columns.\n
+    Carries data internally.'''
     def __init__(self):
         self.data=None
         self.condition=None
@@ -55,8 +57,9 @@ class movieAgent():
         '''Remove unwanted records internally (mostly rows that are not movie )'''
         self.data=self.data[self.data['titleType']==mask]
 
-class movieAgentBuilder():
-    '''Orchestral class for managing the conceptual level and managing callable hierarchy.'''
+class MovieAgentBuilder():
+    '''Orchestral class for managing callable hierarchy and the internal state of the object MovieAgent.\n
+    Orchestrates the MovieAgent object(s) only.'''
 
     def __init__(self):
         self._initAgent()
@@ -65,14 +68,14 @@ class movieAgentBuilder():
 
     def _initAgent(self):
         '''Orchestrates the flow of code for easy readability.'''
-        movie_agent=movieAgent()
+        movie_agent=MovieAgent()
         self.setupData(movie_agent)
-        movie_agent.applyInternalFilter('movie') #remove anything else than movie in records
+        movie_agent.applyInternalFilter('movie') #Remove anything else than movie in records
         movie_agent.applyRenamedColumns() #Rename the columns to be more intuitive
-        movie_agent.assignCondition('IMDBid', 'Average Rating', 'Number of Votes', 'Primary Title', 'Published', 'Genre')
+        movie_agent.assignCondition('IMDBid', 'Average Rating', 'Number of Votes', 'Primary Title', 'Published', 'Genre') #Mutate only wanted columns
         self.movie_agent_object=movie_agent
 
-    def setupData(self, movie_agent:movieAgent):
+    def setupData(self, movie_agent:MovieAgent):
         '''Setup imdb data and call on files to be merged'''
         title_imr=pl.Path(__file__).parent / 'data' / 'imdb.title.ratings.tsv' #imr=id, metadata, rating
         title_basics=pl.Path(__file__).parent / 'data' / 'imdb.title.basics.tsv' #
@@ -91,7 +94,7 @@ class movieAgentBuilder():
         return result
 
     def assignPath(self, path: str):
-        '''Assign path to user selected dir'''
+        '''Assign path to selected dir'''
         path=pl.Path(path)
         try:
             readTSV=pd.read_csv(path, delimiter='\t') #Read file
@@ -99,49 +102,166 @@ class movieAgentBuilder():
             raise IOError(f"Failed to read CSV: {e}") from e
         return readTSV
 
-    def setupRawData(self, movie_agent:movieAgent):
+    def setupRawData(self, movie_agent:MovieAgent):
         '''Copies the raw data of movieAgent object's df'''
         self.raw_data=movie_agent.data
         return self.raw_data
 
+class MoviePicker():
+    '''Class that internally selects and give movie advice(s).\n
+    Carries MovieAgent dataframe and MovieAgentBuilder raw_data internally'''
+    def __init__(self, movie_agent_builder:MovieAgentBuilder):
+        '''Requires movieAgentBuilder object to initialize'''
+        self.randomizer=random.Random()
+        self.previous=set() #previously recommended movies. list --> IMDBid1,IMDBid2
+        self.df=movie_agent_builder.movie_agent_object.data.copy()
+        self.raw_data=movie_agent_builder.raw_data.copy()
+        self.condition = None
+        self.sort_column = None
+        self.sort_ascending = True
+        self.getAdvice()
 
-def initAPI():
-    '''Pending'''
+    def getAdvice(self, n:int, filter_tools:list[str]):
+        '''Retrieve/get movie recommendations. Main method for selection logic.\n
+        n: number of movie recommendation\n
+        filter_tools: Filter params: column_name, operator, value such as: Average Rating, >, 7
+        '''
+        recommend=[]
+        column_name, operatr, value = filter_tools
+        candidates:pd.DataFrame=self.applyFilter(column_name, operatr, value)
+        #NEED ASK USER ASSIGN SORT OR COMMUNICATE TO CLI OBJECT AND MAKE IT DO THAT.
+        sorted_candidate:pd.DataFrame=self.applySort(candidates) 
+        for index, row_value in sorted_candidate.iterrows():
+            if row_value['IMDBid'] not in self.previous: self.previous.add(row_value['IMDBid'])
+            if row_value['IMDBid'] not in self.previous and len(recommend)<n:
+                recommend.append(self.assignRecommendedHelper(recommend, row_value)) #Append richened data from sorted and filtered rows to recommended list
+        return recommend
+    
+    def giveAdvice():
+        ''''''
 
-def initCLI():
-    '''Manipulate and communicate to the object and take actions via CLI commands.
-    -WIP'''
+    def assignRecommendedHelper(self, row_value:pd.Series):
+        '''Assign primary column values to a dictionary.'''
+        movie_info={
+            'IMDBid': row_value['IMDBid'],
+            'Primary Title': row_value['Primary Title'],
+            'Average Rating': row_value['Average Rating'],
+            'Number of Votes': row_value['Number of Votes'],
+            'Published': row_value['Published'],
+            'Genre': row_value['Genre']
+        }
+        return movie_info
 
-def recommendationLogic():
-    '''
-    '''
+    def applyFilter(self, column_name:str, operatr:str, value:str):
+        '''Apply appropiate value as filter to column_name.'''
+        value=self.assignConversion(column_name, value)
+        candidates=self.df[self.assignOperator(column_name, operatr, value)]
+        return candidates
+    
+    def applyCondition(self, condition):
+        '''Adjust condition property for filterization'''
+        if condition is None:
+            self.condition=None
+        else:
+            self.condition=condition
+    
+    def assignConversion(self, column_name, value):
+        '''Converts value if applicable to its column's value type.'''
+        new_value=value
+        if pd.api.types.is_numeric_dtype(self.df[column_name]): #A type of number, if true
+            try: new_value=int(value)
+            except ValueError: 
+                try: new_value=float(value) 
+                except ValueError:
+                    pass
+        return new_value
+
+    def assignOperator(self, column_name:str, operator:str, value:str):
+        '''Assign str variable to Python operator and return condition'''
+        if operator == ">":
+            condition=self.df[column_name]>value
+        elif operator == "<":
+            condition=self.df[column_name]<value
+        elif operator == "<=":
+            condition=self.df[column_name]<=value
+        elif operator == ">=":
+            condition=self.df[column_name]>=value
+        elif operator == "==":
+            condition=self.df[column_name]==value
+        elif condition is None:
+            raise ValueError(f'Filter operation failed. One of the following is invalid: {column_name},{operator},{value}')
+        self.applyCondition(condition)
+        return self.condition
+    
+    def assignSort(self, column):
+        '''Sort columns based on column parameter'''
+        if self.sort_column==column:
+            self.sort_ascending=not self.sort_ascending
+        else:
+            self.sort_ascending=True
+        self.sort_column=column
+
+    def applySort(self, candidates:pd.DataFrame):
+        '''Apply sort properties with respect to df parameter'''
+        if self.sort_column is not None:
+            sorted_candidates=candidates.sort_values(self.sort_column, ascending=self.sort_ascending)
+        else:
+            sorted_candidates=candidates
+        return sorted_candidates
+        
+class UserInterface():
+    ''''''
+    def initCLI():
+        '''Manipulate and communicate to the object and take actions via CLI commands. '''
+    
+class ServerRequests():
+    '''Future'''
+    def initAPI():
+        '''Pending'''
+
+class AppInitializer():
+    ''''''
+    def __init__(self):
+        self.builder=MovieAgentBuilder()
+        self.advice=MoviePicker(self.builder)
 
 if __name__ == '__main__':
     
-    builder=movieAgentBuilder()
+    ignite=AppInitializer()
+    
+    
     '''
-    NOTE:
-        Major code improvements and refactoring.
+    NOTE:  
 
-            -Fix condition variable bug,
-            -Fix wrong indentations
+        MAJOR UPDATE: Advice algorithm, fixed README.md
 
-            
+            -Fix README.md indentations and wrong instructions,
+            -Add advice class,
+            -Add classes for later use in development,
+                (CLI, ServerRequests, AppInitializer)
+            -Carry initializating to __main__,
+            -Add external filter and sorting logic,
+            -Fix unconventional camelCase class names,
+            -Add descriptions for methods.
+
+    
     TODO:   
             -Make program less concerete (imdb data needs downloaded somehow)
             -Sort the loaded movies with top ratings,
-            -Recommend the top n amount,
-            -Add previously loaded to memory,
+            -Recommend the top n amount of movies,
+            -Add previously loaded to memory to avoid recommendations,
             -Load random top n amount, excluding previously loaded,
-            -Add user filtering.
-            
-    ABLETO:
+            -Add user filtering (Make function that redirects to internal filter)
+            -Line 132  #NEED ASK USER ASSIGN SORT OR COMMUNICATE TO CLI OBJECT AND MAKE IT DO THAT.
     
+    ABLETO:
             -Load data files,
             -Read .tsv files as pandas df object,
             -Call on condition to limit the view of the df,
             -Manipulate columns on the df,
-            -Filter records given arguments'''
+            -Filter records given arguments,
+            -Calculate advice,
+            -Externally filter and sort,'''
 
     
 

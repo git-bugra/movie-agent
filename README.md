@@ -1,14 +1,16 @@
 Following agent app gives out movie recommendations with details like IMDBid, genre, ratings and more included.
 
 Minimal functional features:
+    
     1. Agent can give out recommendations,
     2. You can filter out agent's list to specific needs (Genre, rating, year of release).
 
 
 Broad features (WIP):
-    1. Length of the movie is compared to user tolerancy. (High rated movies average length),
+    
+    1. Length of the movie is considered with respect to user tolerancy when recommending movies.,
 
-    2. Being able to filter out recommendations by genres by selecting buttons,
+    2. Being able to filter out recommendations by genres by selecting GUI buttons,
 
     3. Being able to reduce scope of recommendations (from 250 to 10 or 5),
 
@@ -21,6 +23,7 @@ Request OMDB API for live details
 
 
 Future Dev Plans (Hope in progress :D):
+    
     1. Changed mindset feature: Movies user did not like very long time ago but considered classics
 
     2. Not interested genres algorithm: Genres user rated less than N times (TBD later)
