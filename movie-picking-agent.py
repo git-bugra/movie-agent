@@ -19,10 +19,10 @@ class MovieAgent():
     def applyRenamedColumns(self):
         '''Make columns in imdb .tsv files more readable and intuitive'''
         try:    
-            self.data:pd.DataFrame=self.data.rename(columns={'tconst': 'IMDBid', 
-                                    'averageRating': 'Average Rating', 
-                                    'numVotes': 'Number of Votes', 
-                                    'titleType': 'Title Type', 
+            self.data:pd.DataFrame=self.data.rename(columns={'tconst': 'IMDBid',
+                                    'averageRating': 'Average Rating',
+                                    'numVotes': 'Number of Votes',
+                                    'titleType': 'Title Type',
                                     'primaryTitle': 'Primary Title',
                                     'originalTitle': 'Original Title',
                                     'isAdult': 'Is Adult',
@@ -62,9 +62,9 @@ class MovieAgentBuilder():
     Orchestrates the MovieAgent object(s) only.'''
 
     def __init__(self):
-        self._initAgent()
-        self.raw_data=None
         self.movie_agent_object=None
+        self.raw_data=None
+        self._initAgent()
 
     def _initAgent(self):
         '''Orchestrates the flow of code for easy readability.'''
@@ -110,8 +110,9 @@ class MovieAgentBuilder():
 class MoviePicker():
     '''Class that internally selects and give movie advice(s).\n
     Carries MovieAgent dataframe and MovieAgentBuilder raw_data internally'''
-    def __init__(self, movie_agent_builder:MovieAgentBuilder):
-        '''Requires movieAgentBuilder object to initialize'''
+    def __init__(self, movie_agent_builder:MovieAgentBuilder, filter_tools:list[str]):
+        '''Requires movieAgentBuilder object to initialize
+        filter_tools: column_name, operatr, value to be filtered'''
         self.randomizer=random.Random()
         self.previous=set() #previously recommended movies. list --> IMDBid1,IMDBid2
         self.df=movie_agent_builder.movie_agent_object.data.copy()
@@ -119,7 +120,7 @@ class MoviePicker():
         self.condition = None
         self.sort_column = None
         self.sort_ascending = True
-        self.getAdvice()
+        self.getAdvice(5,filter_tools)
 
     def getAdvice(self, n:int, filter_tools:list[str]):
         '''Retrieve/get movie recommendations. Main method for selection logic.\n
@@ -129,12 +130,16 @@ class MoviePicker():
         recommend=[]
         column_name, operatr, value = filter_tools
         candidates:pd.DataFrame=self.applyFilter(column_name, operatr, value)
-        #NEED ASK USER ASSIGN SORT OR COMMUNICATE TO CLI OBJECT AND MAKE IT DO THAT.
+        print(candidates)
+        candidates=candidates[(candidates['Number of Votes']>10000)&(candidates['Average Rating']>7)]
+        #May want CLI to ask user for sorting, probably not though
+        self.assignSort('Average Rating', False)
         sorted_candidate:pd.DataFrame=self.applySort(candidates) 
         for index, row_value in sorted_candidate.iterrows():
-            if row_value['IMDBid'] not in self.previous: self.previous.add(row_value['IMDBid'])
             if row_value['IMDBid'] not in self.previous and len(recommend)<n:
-                recommend.append(self.assignRecommendedHelper(recommend, row_value)) #Append richened data from sorted and filtered rows to recommended list
+                recommend.append(self.assignRecommendedHelper(row_value)) #Append richened data from sorted and filtered rows to recommended list
+            if row_value['IMDBid'] not in self.previous: self.previous.add(row_value['IMDBid'])
+        print(recommend)
         return recommend
     
     def giveAdvice():
@@ -193,12 +198,9 @@ class MoviePicker():
         self.applyCondition(condition)
         return self.condition
     
-    def assignSort(self, column):
+    def assignSort(self, column, ascend=True):
         '''Sort columns based on column parameter'''
-        if self.sort_column==column:
-            self.sort_ascending=not self.sort_ascending
-        else:
-            self.sort_ascending=True
+        self.sort_ascending=ascend
         self.sort_column=column
 
     def applySort(self, candidates:pd.DataFrame):
@@ -221,28 +223,25 @@ class ServerRequests():
 
 class AppInitializer():
     ''''''
+    filter_tools=['Published', '>', '2000']
     def __init__(self):
         self.builder=MovieAgentBuilder()
-        self.advice=MoviePicker(self.builder)
+        self.advice=MoviePicker(self.builder, self.filter_tools)
 
 if __name__ == '__main__':
     
-    ignite=AppInitializer()
-    
+    AppInitializer()
     
     '''
     NOTE:  
 
         MAJOR UPDATE: Advice algorithm, fixed README.md
 
-            -Fix README.md indentations and wrong instructions,
-            -Add advice class,
-            -Add classes for later use in development,
-                (CLI, ServerRequests, AppInitializer)
-            -Carry initializating to __main__,
-            -Add external filter and sorting logic,
-            -Fix unconventional camelCase class names,
-            -Add descriptions for methods.
+            -Add refactored sorting properties,
+            -Add intuitive docstring to callables,
+            -Fix logic flow in advice method,
+            -Fix MovieAgentBuilder ownership bug
+
 
     
     TODO:   
@@ -253,7 +252,7 @@ if __name__ == '__main__':
             -Load random top n amount, excluding previously loaded,
             -Add user filtering (Make function that redirects to internal filter)
             -Line 132  #NEED ASK USER ASSIGN SORT OR COMMUNICATE TO CLI OBJECT AND MAKE IT DO THAT.
-    
+            -Need contains logic of filtering instead of just == > as Genre = action does not work as many movies contain action
     ABLETO:
             -Load data files,
             -Read .tsv files as pandas df object,
