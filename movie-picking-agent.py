@@ -127,10 +127,9 @@ class MoviePicker():
         n: number of movie recommendation\n
         filter_tools: Filter params: column_name, operator, value such as: Average Rating, >, 7
         '''
-        recommend=[]
+        recommend:list[dict]=[]
         column_name, operatr, value = filter_tools
         candidates:pd.DataFrame=self.applyFilter(column_name, operatr, value)
-        print(candidates)
         candidates=candidates[(candidates['Number of Votes']>10000)&(candidates['Average Rating']>7)]
         #May want CLI to ask user for sorting, probably not though
         self.assignSort('Average Rating', False)
@@ -139,7 +138,8 @@ class MoviePicker():
             if row_value['IMDBid'] not in self.previous and len(recommend)<n:
                 recommend.append(self.assignRecommendedHelper(row_value)) #Append richened data from sorted and filtered rows to recommended list
             if row_value['IMDBid'] not in self.previous: self.previous.add(row_value['IMDBid'])
-        print(recommend)
+        for j in recommend:
+            print(j, '\n')
         return recommend
     
     def giveAdvice():
@@ -159,18 +159,20 @@ class MoviePicker():
 
     def applyFilter(self, column_name:str, operatr:str, value:str):
         '''Apply appropiate value as filter to column_name.'''
+        #Need special case for genre and primary title
         value=self.assignConversion(column_name, value)
-        candidates=self.df[self.assignOperator(column_name, operatr, value)]
+        if column_name == 'Primary Title' or column_name == 'Genre':candidates=self.df[self.assignOperator(column_name, operatr, value, True)] #check for genre to make filter more inclusive.
+        else:candidates=self.df[self.assignOperator(column_name, operatr, value)]
         return candidates
     
-    def applyCondition(self, condition):
+    def applyCondition(self, condition:pd.Series):
         '''Adjust condition property for filterization'''
         if condition is None:
             self.condition=None
         else:
             self.condition=condition
     
-    def assignConversion(self, column_name, value):
+    def assignConversion(self, column_name:str, value:str):
         '''Converts value if applicable to its column's value type.'''
         new_value=value
         if pd.api.types.is_numeric_dtype(self.df[column_name]): #A type of number, if true
@@ -181,24 +183,28 @@ class MoviePicker():
                     pass
         return new_value
 
-    def assignOperator(self, column_name:str, operator:str, value:str):
-        '''Assign str variable to Python operator and return condition'''
-        if operator == ">":
-            condition=self.df[column_name]>value
-        elif operator == "<":
-            condition=self.df[column_name]<value
-        elif operator == "<=":
-            condition=self.df[column_name]<=value
-        elif operator == ">=":
-            condition=self.df[column_name]>=value
-        elif operator == "==":
-            condition=self.df[column_name]==value
-        elif condition is None:
-            raise ValueError(f'Filter operation failed. One of the following is invalid: {column_name},{operator},{value}')
+    def assignOperator(self, column_name:str, operator:str, value:str, contains=False):
+        '''Assign str variable to Python operator and return condition\n
+        contains: Movies tend to have more than one genre. To avoid fixed listing, you can set this setting to true to for instance: your horror movie search includes movies that have horror and action etc.'''
+        if not contains:
+            if operator == ">":
+                condition=self.df[column_name]>value
+            elif operator == "<":
+                condition=self.df[column_name]<value
+            elif operator == "<=":
+                condition=self.df[column_name]<=value
+            elif operator == ">=":
+                condition=self.df[column_name]>=value
+            elif operator == "==":
+                condition=self.df[column_name]==value
+            elif condition is None:
+                raise ValueError(f'Filter operation failed. One of the following is invalid: {column_name},{operator},{value}')
+        else:
+            condition=self.df[column_name].str.contains(value)
         self.applyCondition(condition)
         return self.condition
     
-    def assignSort(self, column, ascend=True):
+    def assignSort(self, column:str, ascend=True):
         '''Sort columns based on column parameter'''
         self.sort_ascending=ascend
         self.sort_column=column
@@ -223,7 +229,7 @@ class ServerRequests():
 
 class AppInitializer():
     ''''''
-    filter_tools=['Published', '>', '2000']
+    filter_tools=['Genre', '>', 'Action']
     def __init__(self):
         self.builder=MovieAgentBuilder()
         self.advice=MoviePicker(self.builder, self.filter_tools)
@@ -235,15 +241,15 @@ if __name__ == '__main__':
     '''
     NOTE:  
 
-        MAJOR UPDATE: Advice algorithm, fixed README.md
+        Refactored filtering
 
-            -Add refactored sorting properties,
-            -Add intuitive docstring to callables,
-            -Fix logic flow in advice method,
-            -Fix MovieAgentBuilder ownership bug
-
-
-    
+            -Add refactored filtering, it is now possible to soft search genres and titles. Filtering on a specific genre or title will now consider movies that have requested genre/title but not limited to requested genre.
+                Example old version:
+                    User filtered genre as action, Z movie has action, horror as genres, it is automatically not recommended.
+                New version:
+                    User filtered genre as action, Z movie has action horror as genres, it is not ejected from potential recommendation.
+            -Add type annotations,
+            -Add print statement to see recommended results temporarily.
     TODO:   
             -Make program less concerete (imdb data needs downloaded somehow)
             -Sort the loaded movies with top ratings,
