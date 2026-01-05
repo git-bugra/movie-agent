@@ -159,7 +159,6 @@ class MoviePicker():
 
     def applyFilter(self, column_name:str, operatr:str, value:str):
         '''Apply appropiate value as filter to column_name.'''
-        #Need special case for genre and primary title
         value=self.assignConversion(column_name, value)
         if column_name == 'Primary Title' or column_name == 'Genre':candidates=self.df[self.assignOperator(column_name, operatr, value, True)] #check for genre to make filter more inclusive.
         else:candidates=self.df[self.assignOperator(column_name, operatr, value)]
@@ -175,7 +174,7 @@ class MoviePicker():
     def assignConversion(self, column_name:str, value:str):
         '''Converts value if applicable to its column's value type.'''
         new_value=value
-        if pd.api.types.is_numeric_dtype(self.df[column_name]): #A type of number, if true
+        if pd.api.types.is_numeric_dtype(self.df[column_name]): 
             try: new_value=int(value)
             except ValueError: 
                 try: new_value=float(value) 
@@ -205,12 +204,12 @@ class MoviePicker():
         return self.condition
     
     def assignSort(self, column:str, ascend=True):
-        '''Sort columns based on column parameter'''
+        '''Flag sort properties of MoviePicker object based on column parameter.'''
         self.sort_ascending=ascend
         self.sort_column=column
 
     def applySort(self, candidates:pd.DataFrame):
-        '''Apply sort properties with respect to df parameter'''
+        '''Apply sorting properties with respect to candidates parameter.'''
         if self.sort_column is not None:
             sorted_candidates=candidates.sort_values(self.sort_column, ascending=self.sort_ascending)
         else:
@@ -241,7 +240,7 @@ if __name__ == '__main__':
     '''
     NOTE:  
 
-        Refactored filtering
+        Refactored filtering and annotation.
 
             -Add refactored filtering, it is now possible to soft search genres and titles. Filtering on a specific genre or title will now consider movies that have requested genre/title but not limited to requested genre.
                 Example old version:
