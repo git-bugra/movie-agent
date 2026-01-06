@@ -128,7 +128,7 @@ class MoviePicker():
         filter_tools: Filter params: column_name, operator, value such as: Average Rating, >, 7
         '''
         recommend:list[dict]=[]
-        column_name, operatr, value = filter_tools
+        column_name, operatr, value=self.assignFilterTools(filter_tools)
         candidates:pd.DataFrame=self.applyFilter(column_name, operatr, value)
         candidates=candidates[(candidates['Number of Votes']>10000)&(candidates['Average Rating']>7)]
         #May want CLI to ask user for sorting, probably not though
@@ -203,6 +203,20 @@ class MoviePicker():
         self.applyCondition(condition)
         return self.condition
     
+    def assignFilterTools(self, filter_tools:list[str]):
+        if len(filter_tools) == 3:
+            column_name, operatr, value = filter_tools
+        else:
+            column_name, operatr, value = self.assignTitleSearch(filter_tools)
+        return column_name, operatr, value
+
+    def assignTitleSearch(self, filter_tools:list[str]):
+        if len(filter_tools) == 1:
+            column_name = 'Primary Title'
+            operatr = '=='
+            value = filter_tools[0]
+        return column_name, operatr, value
+
     def assignSort(self, column:str, ascend=True):
         '''Flag sort properties of MoviePicker object based on column parameter.'''
         self.sort_ascending=ascend
