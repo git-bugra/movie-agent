@@ -161,7 +161,10 @@ class MoviePicker():
         '''Apply appropiate value as filter to column_name.'''
         value=self.assignConversion(column_name, value)
         if column_name == 'Primary Title' or column_name == 'Genre':candidates=self.df[self.assignOperator(column_name, operatr, value, True)] #check for genre to make filter more inclusive.
-        else:candidates=self.df[self.assignOperator(column_name, operatr, value)]
+        else:
+            condition=self.assignOperator(column_name, operatr, value)
+            candidates=self.df[condition]
+            self.applyCondition(condition)
         return candidates
     
     def applyCondition(self, condition:pd.Series):
@@ -200,8 +203,7 @@ class MoviePicker():
                 raise ValueError(f'Filter operation failed. One of the following is invalid: {column_name},{operator},{value}')
         else:
             condition=self.df[column_name].str.contains(value)
-        self.applyCondition(condition)
-        return self.condition
+        return condition
     
     def assignFilterTools(self, filter_tools:list[str]):
         if len(filter_tools) == 3:
