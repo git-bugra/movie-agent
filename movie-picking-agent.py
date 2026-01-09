@@ -4,6 +4,7 @@ import json
 import pandas as pd
 import pathlib as pl
 import operator
+from ui.user-interface.py import UserInterface #type: ignore
 
 '''key=input('Enter OMDB API key\n')
 request=requests.get(f'http://www.omdbapi.com/?apikey={key}&i=tt0108052')
@@ -161,7 +162,9 @@ class MoviePicker():
         '''Apply appropiate value as filter to column_name.'''
         value=self.assignConversion(column_name, value)
         if column_name == 'Primary Title' or column_name == 'Genre':candidates=self.df[self.assignOperator(column_name, operatr, value, True)] #check for genre to make filter more inclusive.
-        else:candidates=self.df[self.assignOperator(column_name, operatr, value)]
+        else:
+            candidates=self.df[self.assignOperator(column_name, operatr, value)]
+            self.applyCondition(candidates)
         return candidates
     
     def applyCondition(self, condition:pd.Series):
@@ -200,8 +203,7 @@ class MoviePicker():
                 raise ValueError(f'Filter operation failed. One of the following is invalid: {column_name},{operator},{value}')
         else:
             condition=self.df[column_name].str.contains(value)
-        self.applyCondition(condition)
-        return self.condition
+        return condition
     
     def assignSort(self, column:str, ascend=True):
         '''Flag sort properties of MoviePicker object based on column parameter.'''
@@ -216,21 +218,21 @@ class MoviePicker():
             sorted_candidates=candidates
         return sorted_candidates
         
-class UserInterface():
-    ''''''
-    def initCLI():
-        '''Manipulate and communicate to the object and take actions via CLI commands. '''
-    
 class ServerRequests():
     '''Future'''
-    def initAPI():
+
+    def initAPI(self):
         '''Pending'''
 
 class AppInitializer():
     ''''''
-    filter_tools=['Genre', '>', 'Action']
+    
     def __init__(self):
         self.builder=MovieAgentBuilder()
+        self.CLI=UserInterface() #['Genre', '>', 'Action']
+        
+    def assignMoviePicker(self):
+        self.filter_tools:list[str]=self.CLI.filter_tools
         self.advice=MoviePicker(self.builder, self.filter_tools)
 
 if __name__ == '__main__':
@@ -240,25 +242,21 @@ if __name__ == '__main__':
     '''
     NOTE:  
 
-        Refactored filtering and annotation.
+        Seperate CLI module and code improvements
 
-            -Add refactored filtering, it is now possible to soft search genres and titles. Filtering on a specific genre or title will now consider movies that have requested genre/title but not limited to requested genre.
-                Example old version:
-                    User filtered genre as action, Z movie has action, horror as genres, it is automatically not recommended.
-                New version:
-                    User filtered genre as action, Z movie has action horror as genres, it is not ejected from potential recommendation.
-            -Add type annotations,
-            -Add print statement to see recommended results temporarily.
+            -Fix mutating side effect of MoviePicker class,
+            -Add CLI module for dynamic filter and encapsulation,
+            -Fix faulty circular dependency logic between classes.
+
+
     TODO:   
-            -Make program less concerete (imdb data needs downloaded somehow)
+            -Make program less concrete (imdb data needs downloaded somehow)
             -Sort the loaded movies with top ratings,
             -Recommend the top n amount of movies,
             -Add previously loaded to memory to avoid recommendations,
             -Load random top n amount, excluding previously loaded,
-            -Add user filtering (Make function that redirects to internal filter)
-            -Line 132  #NEED ASK USER ASSIGN SORT OR COMMUNICATE TO CLI OBJECT AND MAKE IT DO THAT.
-            -Need contains logic of filtering instead of just == > as Genre = action does not work as many movies contain action
-    ABLETO:
+            
+    ABLE TO:
             -Load data files,
             -Read .tsv files as pandas df object,
             -Call on condition to limit the view of the df,
