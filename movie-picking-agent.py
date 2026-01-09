@@ -163,8 +163,9 @@ class MoviePicker():
         value=self.assignConversion(column_name, value)
         if column_name == 'Primary Title' or column_name == 'Genre':candidates=self.df[self.assignOperator(column_name, operatr, value, True)] #check for genre to make filter more inclusive.
         else:
-            candidates=self.df[self.assignOperator(column_name, operatr, value)]
-            self.applyCondition(candidates)
+            condition=self.assignOperator(column_name, operatr, value)
+            candidates=self.df[condition]
+            self.applyCondition(condition)
         return candidates
     
     def applyCondition(self, condition:pd.Series):
