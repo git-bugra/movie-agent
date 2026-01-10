@@ -164,11 +164,11 @@ class MoviePicker():
         else:
             condition=self.assignOperator(column_name, operatr, value)
             candidates=self.df[condition]
-            self.applyCondition(condition)
+            self.assignCondition(condition)
         return candidates
     
-    def applyCondition(self, condition:pd.Series):
-        '''Adjust condition property for filterization'''
+    def assignCondition(self, condition:pd.Series):
+        '''Apply condition property for filterization'''
         if condition is None:
             self.condition=None
         else:
@@ -232,11 +232,6 @@ class MoviePicker():
             sorted_candidates=candidates
         return sorted_candidates
         
-class UserInterface():
-    ''''''
-    def initCLI():
-        '''Manipulate and communicate to the object and take actions via CLI commands. '''
-    
 class ServerRequests():
     '''Future'''
     def initAPI():
@@ -256,24 +251,12 @@ if __name__ == '__main__':
     '''
     NOTE:  
 
-        Refactored filtering and annotation.
-
-            -Add refactored filtering, it is now possible to soft search genres and titles. Filtering on a specific genre or title will now consider movies that have requested genre/title but not limited to requested genre.
-                Example old version:
-                    User filtered genre as action, Z movie has action, horror as genres, it is automatically not recommended.
-                New version:
-                    User filtered genre as action, Z movie has action horror as genres, it is not ejected from potential recommendation.
-            -Add type annotations,
-            -Add print statement to see recommended results temporarily.
     TODO:   
             -Make program less concerete (imdb data needs downloaded somehow)
             -Sort the loaded movies with top ratings,
             -Recommend the top n amount of movies,
             -Add previously loaded to memory to avoid recommendations,
             -Load random top n amount, excluding previously loaded,
-            -Add user filtering (Make function that redirects to internal filter)
-            -Line 132  #NEED ASK USER ASSIGN SORT OR COMMUNICATE TO CLI OBJECT AND MAKE IT DO THAT.
-            -Need contains logic of filtering instead of just == > as Genre = action does not work as many movies contain action
     ABLETO:
             -Load data files,
             -Read .tsv files as pandas df object,
