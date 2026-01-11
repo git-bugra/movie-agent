@@ -4,7 +4,8 @@ import json
 import pandas as pd
 import pathlib as pl
 import operator
-from ui.user-interface.py import UserInterface #type: ignore
+import pdb
+from ui.user_interface import UserInterface 
 
 '''key=input('Enter OMDB API key\n')
 request=requests.get(f'http://www.omdbapi.com/?apikey={key}&i=tt0108052')
@@ -121,19 +122,39 @@ class MoviePicker():
         self.condition = None
         self.sort_column = None
         self.sort_ascending = True
-        self.getAdvice(5,filter_tools)
+        self.genres=self.df['Genre'].str.lower().str.split(',').explode().unique()
+        self.column_map={col.lower(): col for col in self.df.columns}
+        self.applyAdvice(5,filter_tools)
 
-    def getAdvice(self, n:int, filter_tools:list[str]):
+    def applyAdvice(self, n:int, filter_tools:list[str]):
         '''Retrieve/get movie recommendations. Main method for selection logic.\n
         n: number of movie recommendation\n
         filter_tools: Filter params: column_name, operator, value such as: Average Rating, >, 7
         '''
-        recommend:list[dict]=[]
-        column_name, operatr, value = filter_tools
+        column_name, operatr, value=self.assignFilterTools(filter_tools)
         candidates:pd.DataFrame=self.applyFilter(column_name, operatr, value)
+        print('survived candidates', candidates)
         candidates=candidates[(candidates['Number of Votes']>10000)&(candidates['Average Rating']>7)]
         #May want CLI to ask user for sorting, probably not though
         self.assignSort('Average Rating', False)
+        recommended=self.assignAdvice(n,candidates)
+        return recommended
+    
+    def assignFilterTools(self, filter_tools:list[str]):
+        operatr=None
+        if len(filter_tools)==3:
+            column_name, operatr, value=filter_tools
+        elif len(filter_tools)==2:
+            value=filter_tools[1]
+            column_name=filter_tools[0]
+        elif len(filter_tools)==1:
+            value=filter_tools[0]
+            column_name=None
+        return column_name, operatr, value
+
+    def assignAdvice(self, n,candidates):
+        ''''''
+        recommend:list[dict]=[]
         sorted_candidate:pd.DataFrame=self.applySort(candidates) 
         for index, row_value in sorted_candidate.iterrows():
             if row_value['IMDBid'] not in self.previous and len(recommend)<n:
@@ -142,9 +163,6 @@ class MoviePicker():
         for j in recommend:
             print(j, '\n')
         return recommend
-    
-    def giveAdvice():
-        ''''''
 
     def assignRecommendedHelper(self, row_value:pd.Series):
         '''Assign primary column values to a dictionary.'''
@@ -161,11 +179,9 @@ class MoviePicker():
     def applyFilter(self, column_name:str, operatr:str, value:str):
         '''Apply appropiate value as filter to column_name.'''
         value=self.assignConversion(column_name, value)
-        if column_name == 'Primary Title' or column_name == 'Genre':candidates=self.df[self.assignOperator(column_name, operatr, value, True)] #check for genre to make filter more inclusive.
-        else:
-            condition=self.assignOperator(column_name, operatr, value)
-            candidates=self.df[condition]
-            self.applyCondition(condition)
+        condition=self.assignOperator(column_name, operatr, value)
+        candidates=self.df[condition]
+        self.applyCondition(condition)
         return candidates
     
     def applyCondition(self, condition:pd.Series):
@@ -178,6 +194,8 @@ class MoviePicker():
     def assignConversion(self, column_name:str, value:str):
         '''Converts value if applicable to its column's value type.'''
         new_value=value
+        if column_name is None:
+            return value
         if pd.api.types.is_numeric_dtype(self.df[column_name]): 
             try: new_value=int(value)
             except ValueError: 
@@ -186,24 +204,29 @@ class MoviePicker():
                     pass
         return new_value
 
-    def assignOperator(self, column_name:str, operator:str, value:str, contains=False):
+    def assignOperator(self, column_name:str, operator:str, value:str):
         '''Assign str variable to Python operator and return condition\n
         contains: Movies tend to have more than one genre. To avoid fixed listing, you can set this setting to true to for instance: your horror movie search includes movies that have horror and action etc.'''
-        if not contains:
+        if operator is not None:
             if operator == ">":
-                condition=self.df[column_name]>value
+                condition=self.df[self.column_map[column_name.lower()]]>value
             elif operator == "<":
-                condition=self.df[column_name]<value
+                condition=self.df[self.column_map[column_name].lower()]<value
             elif operator == "<=":
-                condition=self.df[column_name]<=value
+                condition=self.df[self.column_map[column_name].lower()]<=value
             elif operator == ">=":
-                condition=self.df[column_name]>=value
+                condition=self.df[self.column_map[column_name].lower()]>=value
             elif operator == "==":
-                condition=self.df[column_name]==value
-            elif condition is None:
+                condition=self.df[self.column_map[column_name].lower()]==value
+            else:
                 raise ValueError(f'Filter operation failed. One of the following is invalid: {column_name},{operator},{value}')
-        else:
-            condition=self.df[column_name].str.contains(value)
+        elif column_name is not None: #User is given two strings
+            condition=self.df[self.column_map[column_name]].str.lower().str.contains(value)
+        elif operator is None: #User is given single string
+            if value.lower() in self.genres:
+                condition=self.df[self.column_map['genre']].str.lower().str.contains(value)
+            else:
+                condition=self.df[self.column_map['primary title']].str.lower().str.contains(value)
         return condition
     
     def assignSort(self, column:str, ascend=True):
@@ -230,11 +253,12 @@ class AppInitializer():
     
     def __init__(self):
         self.builder=MovieAgentBuilder()
-        self.CLI=UserInterface() #['Genre', '>', 'Action']
+        #self.CLI=UserInterface() #['Genre', '>', 'Action']
+        self.assignMoviePicker()
         
     def assignMoviePicker(self):
-        self.filter_tools:list[str]=self.CLI.filter_tools
-        self.advice=MoviePicker(self.builder, self.filter_tools)
+        #self.filter_tools:list[str]=self.CLI.filter_tools
+        self.advice=MoviePicker(self.builder, ['Average Rating', '>', '5'])
 
 if __name__ == '__main__':
     
@@ -243,11 +267,17 @@ if __name__ == '__main__':
     '''
     NOTE:  
 
-        Seperate CLI module and code improvements
+        Major update
 
-            -Fix mutating side effect of MoviePicker class,
-            -Add CLI module for dynamic filter and encapsulation,
-            -Fix faulty circular dependency logic between classes.
+            -Fix hypen file import error,
+            -Add case handling for user inputs that are less than 3 strings,
+            -Add encapsulated version of advice logic,
+            -Add class properties to MoviePicker class,
+            -Fix direct access do DataFrames,
+            -Add merge with main file,
+            -Add dict mapping for consistent look-ups.
+
+
 
 
     TODO:   
