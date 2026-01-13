@@ -244,7 +244,7 @@ class MoviePicker():
         else:
             sorted_candidates=candidates
         return sorted_candidates
-        
+                
 class ServerRequests():
     '''Future'''
 
@@ -269,19 +269,6 @@ if __name__ == '__main__':
     
     '''
     NOTE:  
-
-        Major update
-
-            -Fix hypen file import error,
-            -Add case handling for user inputs that are less than 3 strings,
-            -Add encapsulated version of advice logic,
-            -Add class properties to MoviePicker class,
-            -Fix direct access do DataFrames,
-            -Add merge with main file,
-            -Add dict mapping for consistent look-ups.
-
-
-
 
     TODO:   
             -Make program less concrete (imdb data needs downloaded somehow)
