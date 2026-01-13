@@ -20,8 +20,9 @@ class UserInterface():
                     print("Failed to acknowledge input. Try again or exit the program.")
     
     def assignSplit(self, user_input:str):
+        '''Mutates self.filtertools'''
         self.filter_tools=user_input.strip().lower().split(',')
-        self.filter_tools=[value.strip(' ') for value in self.filter_tools]
+        self.filter_tools=[value.strip() for value in self.filter_tools]
         if len(self.filter_tools)<4 and len(self.filter_tools)>0:
             return True
         else:

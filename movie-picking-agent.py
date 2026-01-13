@@ -55,9 +55,9 @@ class MovieAgent():
             self.condition=None #Consume condition after applying for predictable code
         return self
     
-    def applyInternalFilter(self, mask:str):
+    def applyInternalFilter(self, column:str,mask):
         '''Remove unwanted records internally (mostly rows that are not movie )'''
-        self.data=self.data[self.data['titleType']==mask]
+        self.data=self.data[self.data[column]==mask]
 
 class MovieAgentBuilder():
     '''Orchestral class for managing callable hierarchy and the internal state of the object MovieAgent.\n
@@ -72,7 +72,8 @@ class MovieAgentBuilder():
         '''Orchestrates the flow of code for easy readability.'''
         movie_agent=MovieAgent()
         self.setupData(movie_agent)
-        movie_agent.applyInternalFilter('movie') #Remove anything else than movie in records
+        movie_agent.data=movie_agent.data[movie_agent.data['primaryTitle'].notna()&movie_agent.data['genres'].notna()] #Remove movies with NaN Primary Titles
+        movie_agent.applyInternalFilter('titleType','movie') #Remove anything else than movie in records
         movie_agent.applyRenamedColumns() #Rename the columns to be more intuitive
         movie_agent.assignCondition('IMDBid', 'Average Rating', 'Number of Votes', 'Primary Title', 'Published', 'Genre') #Mutate only wanted columns
         self.movie_agent_object=movie_agent
@@ -222,7 +223,7 @@ class MoviePicker():
                 raise ValueError(f'Filter operation failed. One of the following is invalid: {column_name},{operator},{value}')
         elif column_name is not None: #User is given two strings
             condition=self.df[self.column_map[column_name]].str.lower().str.contains(value)
-        elif operator is None: #User is given single string
+        elif value is not None: #User is given single string
             if value.lower() in self.genres:
                 condition=self.df[self.column_map['genre']].str.lower().str.contains(value)
             else:
@@ -253,12 +254,12 @@ class AppInitializer():
     
     def __init__(self):
         self.builder=MovieAgentBuilder()
-        #self.CLI=UserInterface() #['Genre', '>', 'Action']
+        self.CLI=UserInterface() #['Genre', '>', 'Action']
         self.assignMoviePicker()
         
     def assignMoviePicker(self):
-        #self.filter_tools:list[str]=self.CLI.filter_tools
-        self.advice=MoviePicker(self.builder, ['Average Rating', '>', '5'])
+        self.filter_tools:list[str]=self.CLI.filter_tools
+        self.advice=MoviePicker(self.builder, self.filter_tools)
 
 if __name__ == '__main__':
     
