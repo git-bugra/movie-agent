@@ -1,9 +1,7 @@
 import requests
 import random
-import json
 import pandas as pd
 import pathlib as pl
-import operator
 import pdb
 from ui.user_interface import UserInterface 
 
@@ -111,7 +109,7 @@ class MovieAgentBuilder():
         return self.raw_data
 
 class MoviePicker():
-    '''Class that internally selects and give movie advice(s).\n
+    '''Class that internally selects and gives movie advice(s).\n
     Carries MovieAgent dataframe and MovieAgentBuilder raw_data internally'''
     def __init__(self, movie_agent_builder:MovieAgentBuilder, filter_tools:list[str]):
         '''Requires movieAgentBuilder object to initialize
@@ -259,7 +257,7 @@ class AppInitializer():
         self.assignMoviePicker()
         
     def assignMoviePicker(self):
-        self.filter_tools:list[str]=self.CLI.filter_tools
+        self.filter_tools:list[str]=self.CLI.user_filter
         self.advice=MoviePicker(self.builder, self.filter_tools)
 
 if __name__ == '__main__':
