@@ -134,7 +134,6 @@ class MoviePicker():
         '''
         column_name, operatr, value=self.assignFilterTools(filter_tools)
         candidates:pd.DataFrame=self.applyFilter(column_name, operatr, value)
-        print('survived candidates', candidates)
         candidates=candidates[(candidates['Number of Votes']>10000)&(candidates['Average Rating']>7)]
         #May want CLI to ask user for sorting, probably not though
         self.assignSort('Average Rating', False)
@@ -153,8 +152,8 @@ class MoviePicker():
             column_name=None
         return column_name, operatr, value
 
-    def assignAdvice(self, n,candidates):
-        ''''''
+    def assignAdvice(self, n, candidates):
+        '''Based on given candidates and n as int, print and return the list of recommend which has movies with their information.'''
         recommend:list[dict]=[]
         sorted_candidate:pd.DataFrame=self.applySort(candidates) 
         for index, row_value in sorted_candidate.iterrows():
@@ -252,11 +251,11 @@ class ServerRequests():
         '''Pending'''
 
 class AppInitializer():
-    ''''''
+    '''Main orchestrator that assembles necessary classes and communication.'''
     
     def __init__(self):
         self.builder=MovieAgentBuilder()
-        self.CLI=UserInterface() #['Genre', '>', 'Action']
+        self.CLI=UserInterface() #Expects prompts like Average Rating>5 or Shawshank Redemption
         self.assignMoviePicker()
         
     def assignMoviePicker(self):
@@ -273,9 +272,8 @@ if __name__ == '__main__':
     TODO:   
             -Make program less concrete (imdb data needs downloaded somehow)
             -Sort the loaded movies with top ratings,
-            -Recommend the top n amount of movies,
-            -Add previously loaded to memory to avoid recommendations,
             -Load random top n amount, excluding previously loaded,
+            -Add https request handling,
             
     ABLE TO:
             -Load data files,
@@ -284,7 +282,9 @@ if __name__ == '__main__':
             -Manipulate columns on the df,
             -Filter records given arguments,
             -Calculate advice,
-            -Externally filter and sort,'''
+            -Externally filter and sort,
+            -Add previously loaded to memory to avoid recommendations,
+            -Recommend the top n amount of movies,'''
 
     
 
