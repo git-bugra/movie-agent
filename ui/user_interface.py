@@ -5,21 +5,23 @@ class UserInterface():
 
     def __init__(self): #type: ignore
         self.delimiter="|"
-        self.all_filter_tools:list[list[str]]=self.uiManager()
+        #self.all_filter_tools:list[list[str]]=self.start()
+        self._parse_all_filters("Average Rating, >, 5 | Memento")
 
-    def uiManager(self):
+    def start(self):
         ''''''
         while True:
-            user_input=self.getInput()
-            if self.applyFlagControl(user_input): break
+            user_input=self._get_input()
+            if self._apply_flag_control(user_input): break
             else:
+                filter_tools=self._parse_all_filters(self, user_input)
                 #Check if it is valid filter
-                self.applyInputValidation()
+        return filter_tools
 
-    def getInput(self):
+    def _get_input(self):
         return input('Enter values to search for a movie. Like: Average Rating, >, 5 or if looking for titles or genres, try: Shawshank Redemption or Horror\n')
         
-    def applyFlagControl(self, user_input:str):
+    def _apply_flag_control(self, user_input:str):
         ''''''
         exit_list=['quit', 'exit', 'leave']
         if user_input.strip().lower() in exit_list:
@@ -28,46 +30,45 @@ class UserInterface():
             flag=False
         return flag
 
-    def applyInputValidation(self):
+    def _parse_all_filters(self, user_input:str):
         ''''''
-        try:
-            user_filter=self.applyInput()
-            
-        except ValueError:
-            print("Failed to acknowledge input. Try again or exit the program.")
-            
+        user_input=self._split_by_delimiter(user_input)
+        parsed_filters=[]
+        for filter in user_input:
+            parsed_filters.append(self._parse_filter(filter))
+        return parsed_filters
 
-    def assignAllFilters(self):
-        ''''''
+    def _split_by_delimiter(self, user_input:str):
+        self.delimiter=self._get_delimiter()
+        return self._parse_delimiter(self.delimiter, user_input)
 
-    def applyInput(self, user_input):
-        self.assignDelimiter()
-        return self.applyFilterSplit(user_input)
-        
-    def assignDelimiter(self):
-        user_delimiter=input(f'''Optional: input your one char delimiter or press enter to keep it as: {self.delimiter}, type /help to get more information''')
+    def _get_delimiter(self):
+        user_delimiter=input(f'''Optional: input your one char delimiter or press enter to keep it as: {self.delimiter}, type /help to get more information\n''')
         if user_delimiter in [""," "]:
             pass
-        elif user_delimiter.strip().lower() in ['help', '-help', '--help', '/help']:self.displayHelp(help_delimiter=True)
+        elif user_delimiter.strip().lower() in ['help', '-help', '--help', '/help']:self._display_help(help_delimiter=True)
         elif user_delimiter in string.punctuation.replace(',', ''):self.delimiter=user_delimiter
         else:
             print('Delimiter configuration failed. Set up as default. ('|')')
         return self.delimiter
-    
-    def applyDelimiter(self, delimiter):
+
+    def _parse_delimiter(self, delimiter:str, user_input:str):
         '''Applies delimiter to multiple filters, if there is only one filter ignore.'''
+        filtered_input=user_input.strip().lower().split(delimiter)
+        filtered_input=[value.strip() for value in filtered_input]
+        print(filtered_input, "DELIMITER SPLIT")
+        return filtered_input
 
-
-    def applyFilterSplit(self, user_input:str):
+    def _parse_filter(self, user_input:str):
         ''''''
-        user_filter=user_input.strip().lower().split(',')
-        user_filter=[value.strip() for value in user_filter]
-        if len(user_filter)<4 and len(user_filter)>0:
-            return user_filter
+        filtered_input=user_input.strip().lower().split(',')
+        filtered_input=[value.strip() for value in filtered_input]
+        if len(filtered_input)<4 and len(filtered_input)>0:
+            return filtered_input
         else:
             raise ValueError
         
-    def displayHelp(self, help_delimiter:bool=False, help_input:bool=False ):
+    def _display_help(self, help_delimiter:bool=False, help_input:bool=False ):
         ''''''
         if help_delimiter==True:
             print(f'''A delimiter is your splitting method for multiple filtering in one input. The default is assigned to '|'\n' \
@@ -78,6 +79,9 @@ class UserInterface():
             WARNING: comma is NOT valid delimiter as it is used for different case.''')
         elif help_input==True:
             print(f'''WIP''')
+
+if __name__ == "__main__":
+    ui=UserInterface()
     '''
     NOTE:
             Filter logic update
