@@ -1,27 +1,30 @@
 import string
+import asyncio
 
 class UserInterface():
     '''Asks user input for filteration such as: Average Rating, >, 5'''
 
     def __init__(self): #type: ignore
         self.delimiter="|"
-        #self.all_filter_tools:list[list[str]]=self.start()
-        self._parse_all_filters("Average Rating, >, 5 | Memento")
+        self.all_filter_tools:list[list[str]]=self.start()
 
     def start(self):
         ''''''
-        while True:
+        flag=True
+        while flag:
             user_input=self._get_input()
-            if self._apply_flag_control(user_input): break
+            if self._is_exit(user_input)==True: break
+            elif self._is_display_help(user_input): self.display_help()
             else:
-                filter_tools=self._parse_all_filters(self, user_input)
+                filter_tools=self._parse_all_filters(user_input)
+                flag=False
                 #Check if it is valid filter
         return filter_tools
 
     def _get_input(self):
-        return input('Enter values to search for a movie. Like: Average Rating, >, 5 or if looking for titles or genres, try: Shawshank Redemption or Horror\n')
+        return input('Type -help to open instructions menu.\n')
         
-    def _apply_flag_control(self, user_input:str):
+    def _is_exit(self, user_input:str):
         ''''''
         exit_list=['quit', 'exit', 'leave']
         if user_input.strip().lower() in exit_list:
@@ -46,7 +49,6 @@ class UserInterface():
         user_delimiter=input(f'''Optional: input your one char delimiter or press enter to keep it as: {self.delimiter}, type /help to get more information\n''')
         if user_delimiter in [""," "]:
             pass
-        elif user_delimiter.strip().lower() in ['help', '-help', '--help', '/help']:self._display_help(help_delimiter=True)
         elif user_delimiter in string.punctuation.replace(',', ''):self.delimiter=user_delimiter
         else:
             print('Delimiter configuration failed. Set up as default. ('|')')
@@ -56,7 +58,6 @@ class UserInterface():
         '''Applies delimiter to multiple filters, if there is only one filter ignore.'''
         filtered_input=user_input.strip().lower().split(delimiter)
         filtered_input=[value.strip() for value in filtered_input]
-        print(filtered_input, "DELIMITER SPLIT")
         return filtered_input
 
     def _parse_filter(self, user_input:str):
@@ -68,20 +69,37 @@ class UserInterface():
         else:
             raise ValueError
         
-    def _display_help(self, help_delimiter:bool=False, help_input:bool=False ):
+    def _is_display_help(self, user_input:str):
+        '''Checks for is user asking for help.'''
+        if user_input in ['delimiter', 'search', 'filter', 'help']:
+            return self.display_help(True)
+
+    def display_help(self, flag:bool):
         ''''''
-        if help_delimiter==True:
-            print(f'''A delimiter is your splitting method for multiple filtering in one input. The default is assigned to '|'\n' \
-            'A delimiter allows program to recognize seperate filters in one line such as:\n' \
-            '"Average Rating, >, 5 | Number of Votes, >, 10000" If you do set delimiter a special case, it needs to be valid. (Any in: {string.punctuation.replace(',','')})\n
-            There is no logical reason more than self preference to changing the delimiter.
+        user_text=input('You opened instructions/help menu. Choose options and press enter to see intructions. \nOptions:\n\tsearch\n\tdelimiter\n\tfilter\n\tquit\n')
+
+        while flag==True:
             
-            WARNING: comma is NOT valid delimiter as it is used for different case.''')
-        elif help_input==True:
-            print(f'''WIP''')
+            if user_text in 'delimiter':
+                print(f'''A delimiter is your splitting method for multiple filtering in one input. The default is assigned to '|'\n' \
+                'A delimiter allows program to recognize seperate filters in one line such as:\n' \
+                '"Average Rating, >, 5 | Number of Votes, >, 10000" If you do set delimiter a special case, it needs to be valid. (Any in: {string.punctuation.replace(',','')})\n
+                There is no logical reason more than self preference to changing the delimiter.
+                
+                WARNING: comma is NOT valid delimiter as it is used for different case.''')
+                user_text=input('\nOptions:\n\tsearch\n\tdelimiter\n\tfilter\n\tquit\n')
+
+            elif user_text in 'search':
+                print(f'''To search for a movie, enter values such as: Average Rating, >, 5 or if looking for titles or genres, try typing and entering: Shawshank Redemption or Horror\n''')
+            
+            elif user_text in 'filter':
+                print('''To apply more than one filter ''')
+
+            elif self._is_exit(user_text):
+                flag=False
 
 if __name__ == "__main__":
-    ui=UserInterface()
+    ui=UserInterface()    
     '''
     NOTE:
             Filter logic update

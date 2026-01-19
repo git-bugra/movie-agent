@@ -3,7 +3,8 @@ import random
 import pandas as pd
 import pathlib as pl
 import pdb
-from ui.user_interface import UserInterface 
+from ui.user_interface import UserInterface
+import time
 
 class MovieAgent():
     '''Main object responsible for clearing, fixing columns and internally consume columns.\n
@@ -60,28 +61,35 @@ class MovieAgentBuilder():
     def __init__(self):
         self.movie_agent_object=None
         self.raw_data=None
+        self.preprocessed_path=pl.Path(__file__).parent / 'data' / 'preprocessed_data.parquet'
         self._build_agent()
 
     def _build_agent(self):
         '''Orchestrates the flow of code for easy readability.'''
         movie_agent=MovieAgent()
         self.load_data(movie_agent)
-        movie_agent.data=movie_agent.data[movie_agent.data['primaryTitle'].notna()&movie_agent.data['genres'].notna()] #Remove movies with NaN Primary Titles
-        movie_agent.filter_rows('titleType','movie') #Remove anything else than movie in records
-        movie_agent.rename_columns() #Rename the columns to be more intuitive
-        movie_agent.select_columns('IMDBid', 'Average Rating', 'Number of Votes', 'Primary Title', 'Published', 'Genre') #Mutate only wanted columns
         self.movie_agent_object=movie_agent
 
     def load_data(self, movie_agent:MovieAgent):
-        '''Setup imdb data and call on files to be merged'''
-        title_imr=pl.Path(__file__).parent / 'data' / 'imdb.title.ratings.tsv' #imr=id, metadata, rating
-        title_basics=pl.Path(__file__).parent / 'data' / 'imdb.title.basics.tsv' #
-        title_basics_df=self.read_tsv_file(title_basics)
-        title_imr_df=self.read_tsv_file(title_imr)
-        movie_agent.data=self.merge_dataframes(title_imr_df,title_basics_df) #insert df to be merged
+        '''Setup imdb data and call on files to be modified'''
+        start=time.time()
+        if pl.Path.exists(self.preprocessed_path):
+            movie_agent.data=pd.read_parquet(self.preprocessed_path)
+        else:
+            title_imr=pl.Path(__file__).parent / 'data' / 'imdb.title.ratings.tsv' #imr=id, metadata, rating
+            title_basics=pl.Path(__file__).parent / 'data' / 'imdb.title.basics.tsv' #
+            title_basics_df=self.read_tsv_file(title_basics)
+            title_imr_df=self.read_tsv_file(title_imr)
+            movie_agent.data=self.merge_dataframes(title_imr_df,title_basics_df) #insert df to be merged
+            movie_agent.data=movie_agent.data[movie_agent.data['primaryTitle'].notna()&movie_agent.data['genres'].notna()] #Remove movies with NaN Primary Titles
+            movie_agent.filter_rows('titleType','movie') #Remove anything else than movie in records
+            movie_agent.rename_columns() #Rename the columns to be more intuitive
+            movie_agent.select_columns('IMDBid', 'Average Rating', 'Number of Votes', 'Primary Title', 'Published', 'Genre') #Mutate only wanted columns
+            self._save_dataframe(movie_agent.data)
+        print(f"Operation runtime: {time.time()-start}")
         self.raw_data=self._copy_raw_data(movie_agent)
         return movie_agent
-    
+
     def merge_dataframes(self,*args:pd.DataFrame):
         '''Merges .tsv data files. Mutates self.data.'''
         result=args[0]
@@ -103,6 +111,10 @@ class MovieAgentBuilder():
         '''Copies the raw data of movieAgent object's df'''
         self.raw_data=movie_agent.data
         return self.raw_data
+    
+    def _save_dataframe(self, data=pd.DataFrame):
+        data.to_parquet(self.preprocessed_path)
+        print('Data is preprocessed and saved.')
 
 class MoviePicker():
     '''Class that internally selects and gives movie advice(s).\n
@@ -121,14 +133,13 @@ class MoviePicker():
         self.column_map={col.lower(): col for col in self.df.columns}
         self.get_recommendations(5,filter_tools)
 
-    def get_recommendations(self, n:int, filter_tools:list[str]):
+    def get_recommendations(self, n:int, filter_tools:list[list[str]]):
         '''Retrieve/get movie recommendations. Main method for selection logic.\n
         n: number of movie recommendation\n
         filter_tools: Filter params: column_name, operator, value such as: Average Rating, >, 7
         '''
-        column_name, operatr, value=self._parse_filter_tools(filter_tools)
         #Check if column_name, operatr, value valid in dataframe
-        candidates:pd.DataFrame=self.apply_filter(column_name, operatr, value)
+        candidates=self.apply_all_filters(filter_tools)
         self.configure_sort('Average Rating', False)
         recommended=self._select_movies(n,candidates)
         return recommended
@@ -169,6 +180,14 @@ class MoviePicker():
         }
         return movie_info
 
+    def apply_all_filters(self, filter_tools:list[list[str]]):
+        candidates=self.df
+        for filters in filter_tools:
+            column_name, operatr, value=self._parse_filter_tools(filters)
+            self.apply_filter(column_name, operatr, value)
+            candidates=candidates[self.condition]
+        return candidates
+
     def apply_filter(self, column_name:str, operatr:str, value:str):
         '''Apply appropiate value as filter to column_name.'''
         value=self._convert_value(column_name, value)
@@ -202,8 +221,8 @@ class MoviePicker():
     def _build_filter_condition(self, column_name:str, operator:str, value:str):
         '''Build pandas condition based on column, operator, and value\n
         contains: Movies tend to have more than one genre. To avoid fixed listing, you can set this setting to true to for instance: your horror movie search includes movies that have horror and action etc.'''
-        condition=self.df[self.column_map[column_name.lower()]]
         if operator is not None:
+            condition=self.df[self.column_map[column_name.lower()]]
             if operator == ">":
                 return condition>value
             elif operator == "<":
@@ -221,10 +240,10 @@ class MoviePicker():
         else: raise ValueError(f'Operation failed. One of the following is invalid: {column_name},{operator},{value}')
         return condition
     
-    def _build_string_condition(self, column_name, value):
+    def _build_string_condition(self, column_name:str, value):
         '''Helper function that checks data for broader string matches, not exact.'''
         if column_name is not None: #User is given two strings
-            condition=self.df[self.column_map[column_name]].str.lower().str.contains(value)
+            condition=self.df[self.column_map[column_name.lower()]].str.lower().str.contains(value)
         else: #User is given single string
             if value.lower() in self.genres:
                 condition=self.df[self.column_map['genre']].str.lower().str.contains(value)
@@ -260,20 +279,25 @@ class AppManager():
         self._create_movie_picker()
         
     def _create_movie_picker(self):
-        self.filter_tools:list[str]=self.CLI.all_filter_tools #Needs works
+        self.filter_tools:list[str]=self.CLI.all_filter_tools #Needs work
         self.advice=MoviePicker(self.builder, self.filter_tools)
 
 if __name__ == '__main__':
     AppManager()
     
     '''
-    NOTE:  
+    NOTE:  Performance optimization update
+
+            -Add abstraction layers,
+            -Add fully operational multi filtering,
+            -Add file save and load that increases program run time to 
 
     TODO:   
             -Make program less concrete (imdb data needs downloaded somehow)
             -Sort the loaded movies with top ratings,
             -Load random top n amount, excluding previously loaded,
             -Add https request handling,
+            -Add constant backend data insertion and update.
             
     ABLE TO:
             -Load data files,
