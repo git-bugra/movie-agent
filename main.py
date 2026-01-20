@@ -181,6 +181,7 @@ class MoviePicker():
         return movie_info
 
     def apply_all_filters(self, filter_tools:list[list[str]]):
+        '''Unpacks filter tools and applies each filter in it manually.'''
         candidates=self.df
         for filters in filter_tools:
             column_name, operatr, value=self._parse_filter_tools(filters)
@@ -286,11 +287,13 @@ if __name__ == '__main__':
     AppManager()
     
     '''
-    NOTE:  Performance optimization update
+    NOTE:  86x faster runtime update
 
             -Add abstraction layers,
             -Add fully operational multi filtering,
-            -Add file save and load that increases program run time to 
+            -Add data load and saving for faster runtime,
+            -Fix high debugging overhead,
+            -Add better instruction prints.
 
     TODO:   
             -Make program less concrete (imdb data needs downloaded somehow)
