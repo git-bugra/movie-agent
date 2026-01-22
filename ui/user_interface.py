@@ -14,15 +14,15 @@ class UserInterface():
         while flag:
             user_input=self._get_input()
             if self._is_exit(user_input)==True: break
-            elif self._is_display_help(user_input): self.display_help()
+            elif self._is_display_help(user_input): self.display_help(True)
             else:
-                filter_tools=self._parse_all_filters(user_input)
                 flag=False
                 #Check if it is valid filter
+                filter_tools=self._parse_all_filters(user_input)
         return filter_tools
 
     def _get_input(self):
-        return input('Type -help to open instructions menu.\n')
+        return input('\033cOptions: \n\t-search movie\n\t-press enter to skip this step \n\t-type -help to open instructions menu.\n')
         
     def _is_exit(self, user_input:str):
         '''Check if user is given exit command to interface, if so return true.'''
@@ -49,12 +49,12 @@ class UserInterface():
 
     def _get_delimiter(self):
         '''Ask user for delimiter argument'''
-        user_delimiter=input(f'''Optional: input your one char delimiter or press enter to keep it as: {self.delimiter}, type /help to get more information\n''')
+        user_delimiter=input(f'''\033cOptional: input your one char delimiter or press enter to keep it as: {self.delimiter}, type /help to get more information\n''')
         if user_delimiter in [""," "]:
             pass
         elif user_delimiter in string.punctuation.replace(',', ''):self.delimiter=user_delimiter
         else:
-            print('Delimiter configuration failed. Set up as default. ('|')')
+            print('Delimiter configuration failed. Set up as default. ("|")')
         return self.delimiter
 
     def _parse_delimiter(self, delimiter:str, user_input:str):
@@ -74,8 +74,10 @@ class UserInterface():
         
     def _is_display_help(self, user_input:str):
         '''Check for is user asking for help.'''
-        if user_input in ['delimiter', 'search', 'filter', 'help']:
-            return self.display_help(True)
+        if user_input in ['delimiter', 'search', 'filter', 'help', '-help']:
+            return True
+        else:
+            return False
 
     def display_help(self, flag:bool):
         '''Print help instructions based on user request.'''
@@ -84,7 +86,7 @@ class UserInterface():
         while flag==True:
             
             if user_text in 'delimiter':
-                print(f'''A delimiter is your splitting method for multiple filtering in one input. The default is assigned to '|'\n' \
+                print(f'''\033cA delimiter is your splitting method for multiple filtering in one input. The default is assigned to '|'\n' \
                 'A delimiter allows program to recognize seperate filters in one line such as:\n' \
                 '"Average Rating, >, 5 | Number of Votes, >, 10000" If you do set delimiter a special case, it needs to be valid. (Any in: {string.punctuation.replace(',','')})\n
                 There is no logical reason more than self preference to changing the delimiter.
@@ -93,16 +95,18 @@ class UserInterface():
                 user_text=input('\nOptions:\n\tsearch\n\tdelimiter\n\tfilter\n\tquit\n')
 
             elif user_text in 'search':
-                print(f'''To search for a movie, enter values such as: Average Rating, >, 5 or if looking for titles or genres, try typing and entering: Shawshank Redemption or Horror\n''')
-            
+                print(f'''\033cTo search for a movie, enter values such as: Average Rating, >, 5 or if looking for titles or genres, try typing and entering: Shawshank Redemption or Horror\n''')
+                user_text=input('\nOptions:\n\tsearch\n\tdelimiter\n\tfilter\n\tquit\n')
+
             elif user_text in 'filter':
-                print('''To apply more than one filter ''')
+                print(f'''\033cTo apply more than one filter, seperate the filters by the {self.delimiter}''')
+                user_text=input('\Options:\n\tsearch\n\tdelimiter\n\tfilter\n\tquit\n')
 
             elif self._is_exit(user_text):
                 flag=False
 
 if __name__ == "__main__":
-    ui=UserInterface()    
+    
     '''
     NOTE:
             Filter logic update

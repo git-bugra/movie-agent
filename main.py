@@ -145,6 +145,8 @@ class MoviePicker():
         return recommended
     
     def _parse_filter_tools(self, filter_tools:list[str]):
+        '''Based on the argument length, assign variables to apply filters.
+        This is needed for allowing user to type in titles and genres without explicit operations.'''
         operatr=None
         if len(filter_tools)==3:
             column_name, operatr, value=filter_tools
@@ -164,6 +166,7 @@ class MoviePicker():
             if row_value['IMDBid'] not in self.previous and len(recommend)<n:
                 recommend.append(self._row_to_dict(row_value)) #Append richened data from sorted and filtered rows to recommended list
             if row_value['IMDBid'] not in self.previous: self.previous.add(row_value['IMDBid'])
+        print('\033c') #Remove previous lines
         for j in recommend:
             print(j, '\n')
         return recommend
@@ -300,7 +303,8 @@ if __name__ == '__main__':
             -Sort the loaded movies with top ratings,
             -Load random top n amount, excluding previously loaded,
             -Add https request handling,
-            -Add constant backend data insertion and update.
+            -Add constant backend data insertion and update,
+            -Need to check validation for user filters.
             
     ABLE TO:
             -Load data files,
