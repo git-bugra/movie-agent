@@ -14,7 +14,7 @@ class UserInterface():
         while flag:
             user_input=self._get_input()
             if self._is_exit(user_input)==True: break
-            elif self._is_display_help(user_input): self.display_help(True)
+            elif self._is_input_help(user_input): self.display_help(True)
             else:
                 flag=False
                 #Check if it is valid filter
@@ -72,7 +72,7 @@ class UserInterface():
         else:
             raise ValueError
         
-    def _is_display_help(self, user_input:str):
+    def _is_input_help(self, user_input:str):
         '''Check for is user asking for help.'''
         if user_input in ['delimiter', 'search', 'filter', 'help', '-help']:
             return True

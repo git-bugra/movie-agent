@@ -1,9 +1,9 @@
-import requests
 import random
 import pandas as pd
 import pathlib as pl
 import pdb
 from ui.user_interface import UserInterface
+from server import server
 import time
 
 class MovieAgent():
@@ -129,6 +129,7 @@ class MoviePicker():
         self.condition = None
         self.sort_column = None
         self.sort_ascending = True
+        self.user=None
         self.genres=self.df['Genre'].str.lower().str.split(',').explode().unique()
         self.column_map={col.lower(): col for col in self.df.columns}
         self.get_recommendations(5,filter_tools)
@@ -141,9 +142,17 @@ class MoviePicker():
         #Check if column_name, operatr, value valid in dataframe
         candidates=self.apply_all_filters(filter_tools)
         self.configure_sort('Average Rating', False)
-        recommended=self._select_movies(n,candidates)
-        return recommended
+        filtered_candidates=self._select_movies(n,candidates) #TODO: Remove fixed N.
+        recommended=self.fetch_advice(filtered_candidates)
+        return filtered_candidates
     
+    def fetch_advice(self, filtered_candidates:list[dict]):
+        '''TODO: Design an algorithm that calculates what user might like and recommend according to that.'''
+        self.fetch_advice_helper()
+
+    def fetch_advice_helper(self):
+        '''TODO: For limited advices, help fetch advice to internally flex on some filters'''
+
     def _parse_filter_tools(self, filter_tools:list[str]):
         '''Based on the argument length, assign variables to apply filters.
         This is needed for allowing user to type in titles and genres without explicit operations.'''
@@ -160,16 +169,16 @@ class MoviePicker():
 
     def _select_movies(self, n, candidates):
         '''Based on given candidates and n as int, print and return the list of recommend which has movies with their information.'''
-        recommend:list[dict]=[]
+        filtered_candidates:list[dict]=[]
         sorted_candidate:pd.DataFrame=self.sort_candidates(candidates) 
         for index, row_value in sorted_candidate.iterrows():
-            if row_value['IMDBid'] not in self.previous and len(recommend)<n:
-                recommend.append(self._row_to_dict(row_value)) #Append richened data from sorted and filtered rows to recommended list
+            if row_value['IMDBid'] not in self.previous and len(filtered_candidates)<n:
+                filtered_candidates.append(self._row_to_dict(row_value)) #Append richened data from sorted and filtered rows to recommended list
             if row_value['IMDBid'] not in self.previous: self.previous.add(row_value['IMDBid'])
         print('\033c') #Remove previous lines
-        for j in recommend:
+        for j in filtered_candidates:
             print(j, '\n')
-        return recommend
+        return filtered_candidates
 
     def _row_to_dict(self, row_value:pd.Series):
         '''Convert row to dictionary with primary column values.'''
@@ -267,12 +276,6 @@ class MoviePicker():
         else:
             sorted_candidates=candidates
         return sorted_candidates
-                
-class ServerRequests():
-    '''Future'''
-
-    def init_api(self):
-        '''Pending'''
 
 class AppManager():
     '''Main orchestrator that assembles necessary classes and communication.'''
@@ -283,7 +286,7 @@ class AppManager():
         self._create_movie_picker()
         
     def _create_movie_picker(self):
-        self.filter_tools:list[str]=self.CLI.all_filter_tools #Needs work
+        self.filter_tools:list[str]=self.CLI.all_filter_tools
         self.advice=MoviePicker(self.builder, self.filter_tools)
 
 if __name__ == '__main__':
