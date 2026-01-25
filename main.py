@@ -3,7 +3,6 @@ import pandas as pd
 import pathlib as pl
 import pdb
 from ui.user_interface import UserInterface
-from server import server
 import time
 
 class MovieAgent():
@@ -50,9 +49,11 @@ class MovieAgent():
             self.condition=None #Consume condition after applying for predictable code
         return self
     
-    def filter_rows(self, column:str,mask):
-        '''Remove unwanted records internally (mostly rows that are not movie )'''
-        self.data=self.data[self.data[column]==mask]
+    def filter_rows(self, column:str, mask):
+        '''Remove unwanted records internally.'''
+        data:pd.DataFrame
+        data=self.data[self.data[column]==mask]
+        return data
 
 class MovieAgentBuilder():
     '''Orchestral class for managing callable hierarchy and the internal state of the object MovieAgent.\n
@@ -81,13 +82,12 @@ class MovieAgentBuilder():
             title_basics_df=self.read_tsv_file(title_basics)
             title_imr_df=self.read_tsv_file(title_imr)
             movie_agent.data=self.merge_dataframes(title_imr_df,title_basics_df) #insert df to be merged
-            movie_agent.data=movie_agent.data[movie_agent.data['primaryTitle'].notna()&movie_agent.data['genres'].notna()] #Remove movies with NaN Primary Titles
-            movie_agent.filter_rows('titleType','movie') #Remove anything else than movie in records
+            movie_agent.data=self._purge_data(movie_agent) #retains data quality
             movie_agent.rename_columns() #Rename the columns to be more intuitive
-            movie_agent.select_columns('IMDBid', 'Average Rating', 'Number of Votes', 'Primary Title', 'Published', 'Genre') #Mutate only wanted columns
-            self._save_dataframe(movie_agent.data)
+            movie_agent.select_columns('IMDBid', 'Average Rating', 'Number of Votes', 'Primary Title', 'Published', 'Genre', 'Title Type') #Mutate only wanted columns
         print(f"Operation runtime: {time.time()-start}")
         self.raw_data=self._copy_raw_data(movie_agent)
+        self._save_dataframe(movie_agent.data)
         return movie_agent
 
     def merge_dataframes(self,*args:pd.DataFrame):
@@ -112,18 +112,24 @@ class MovieAgentBuilder():
         self.raw_data=movie_agent.data
         return self.raw_data
     
-    def _save_dataframe(self, data=pd.DataFrame):
+    def _save_dataframe(self, data:pd.DataFrame):
         data.to_parquet(self.preprocessed_path)
         print('Data is preprocessed and saved.')
 
-class MoviePicker():
-    '''Class that internally selects and gives movie advice(s).\n
+    def _purge_data(self, movie_agent:MovieAgent):
+        '''Remove excessive items with low votes, empty primary titles and genres.'''
+        movie_agent.data=movie_agent.filter_rows('titleType','movie') #Remove anything else than movie in records
+        movie_agent.data=movie_agent.data[(movie_agent.data['primaryTitle'].notna())&(movie_agent.data['genres'].notna())&(movie_agent.data['numVotes']>10000)] #Purge unsuitable titles
+        return movie_agent.data
+    
+class MovieSelector():
+    '''Class that internally selects and stores selected movies after user filter is applied.\n
     Carries MovieAgent dataframe and MovieAgentBuilder raw_data internally'''
     def __init__(self, movie_agent_builder:MovieAgentBuilder, filter_tools:list[str]):
         '''Requires movieAgentBuilder object to initialize
         filter_tools: column_name, operatr, value to be filtered'''
         self.randomizer=random.Random()
-        self.previous=set() #previously recommended movies. list --> IMDBid1,IMDBid2
+        self.previous=set() #previously selected movies. list --> IMDBid1,IMDBid2
         self.df=movie_agent_builder.movie_agent_object.data.copy()
         self.raw_data=movie_agent_builder.raw_data.copy()
         self.condition = None
@@ -132,10 +138,10 @@ class MoviePicker():
         self.user=None
         self.genres=self.df['Genre'].str.lower().str.split(',').explode().unique()
         self.column_map={col.lower(): col for col in self.df.columns}
-        self.get_recommendations(5,filter_tools)
+        self.get_movies(100,filter_tools)
 
-    def get_recommendations(self, n:int, filter_tools:list[list[str]]):
-        '''Retrieve/get movie recommendations. Main method for selection logic.\n
+    def get_movies(self, n:int, filter_tools:list[list[str]]):
+        '''Retrieve list of movies with user filter applied.\n
         n: number of movie recommendation\n
         filter_tools: Filter params: column_name, operator, value such as: Average Rating, >, 7
         '''
@@ -143,7 +149,7 @@ class MoviePicker():
         candidates=self.apply_all_filters(filter_tools)
         self.configure_sort('Average Rating', False)
         filtered_candidates=self._select_movies(n,candidates) #TODO: Remove fixed N.
-        recommended=self.fetch_advice(filtered_candidates)
+        #recommended=self.fetch_advice(filtered_candidates)
         return filtered_candidates
     
     def fetch_advice(self, filtered_candidates:list[dict]):
@@ -223,7 +229,7 @@ class MoviePicker():
         new_value=value
         if column_name is None:
             return value
-        if pd.api.types.is_numeric_dtype(self.df[column_name]): 
+        if pd.api.types.is_numeric_dtype(self.df[self.column_map[column_name.lower()]]): 
             try: new_value=int(value)
             except ValueError: 
                 try: new_value=float(value) 
@@ -287,7 +293,7 @@ class AppManager():
         
     def _create_movie_picker(self):
         self.filter_tools:list[str]=self.CLI.all_filter_tools
-        self.advice=MoviePicker(self.builder, self.filter_tools)
+        self.advice=MovieSelector(self.builder, self.filter_tools)
 
 if __name__ == '__main__':
     AppManager()

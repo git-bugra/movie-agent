@@ -22,7 +22,7 @@ class UserInterface():
         return filter_tools
 
     def _get_input(self):
-        return input('\033cOptions: \n\t-search movie\n\t-press enter to skip this step \n\t-type -help to open instructions menu.\n')
+        return input('\033cWelcome to movie agent!\n\nYour options: \n\t-search movie\n\t-press enter to skip this step \n\t-type -help to open instructions menu.\n')
         
     def _is_exit(self, user_input:str):
         '''Check if user is given exit command to interface, if so return true.'''
