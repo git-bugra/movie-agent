@@ -85,9 +85,9 @@ class MovieAgentBuilder():
             movie_agent.data=self._purge_data(movie_agent) #retain data quality
             movie_agent.rename_columns() #rename the columns to be more intuitive
             movie_agent.select_columns('IMDBid', 'Average Rating', 'Number of Votes', 'Primary Title', 'Published', 'Genre') #Mutate only wanted columns
+            movie_agent.data.to_parquet(self.preprocessed_path)
         print(f"Operation runtime: {time.time()-start}")
         self.raw_data=self._copy_raw_data(movie_agent)
-        self._save_dataframe(movie_agent.data)
         return movie_agent
 
     def merge_dataframes(self, *args:pd.DataFrame):
@@ -111,10 +111,6 @@ class MovieAgentBuilder():
         '''Copies the raw data of movieAgent object's df'''
         self.raw_data=movie_agent.data
         return self.raw_data
-    
-    def _save_dataframe(self, data:pd.DataFrame):
-        data.to_parquet(self.preprocessed_path)
-        print('Data is preprocessed and saved.')
 
     def _purge_data(self, movie_agent:MovieAgent):
         '''Remove excessive items with low votes, empty primary titles and genres.'''
@@ -122,6 +118,33 @@ class MovieAgentBuilder():
         movie_agent.data=movie_agent.data[(movie_agent.data['primaryTitle'].notna())&(movie_agent.data['genres'].notna())&(movie_agent.data['numVotes']>50000)] #Purge unsuitable titles
         return movie_agent.data
     
+class HistoryLog():
+    '''Record, save locally and check previously recommended movies with IMDBid and timestamp.'''
+    
+    def __init__(self, candidates:pd.DataFrame):
+        self.history_path=pl.Path(__file__).parent / 'data' / 'previously_rec.csv'
+        self.previous=None
+        self.current=None #not saved but previously recommended files needs being saved
+        self.candidates=candidates
+        self.main()
+
+    def main(self):
+        self._read_file()
+
+    def _read_file(self):
+        if self.history_path.is_file():
+            self.previous=pd.read_csv(self.history_path)
+            return True
+        else:
+            self.previous=pd.DataFrame()
+            return False
+    
+    def _save_current_recommended(self, ):
+        ''''''
+
+    def _check_previously_recommended(self, candidates:pd.DataFrame):
+        ''''''
+
 class MovieSelector():
     '''Class that internally selects and stores selected movies after user filter is applied.\n
     Carries MovieAgent dataframe and MovieAgentBuilder raw_data internally'''
@@ -129,7 +152,6 @@ class MovieSelector():
         '''Requires movieAgentBuilder object to initialize
         filter_tools: column_name, operatr, value to be filtered'''
         self.randomizer=random.Random()
-        self.previous=set() #previously selected movies. list --> IMDBid1,IMDBid2
         self.df=movie_agent_builder.movie_agent_object.data.copy()
         self.raw_data=movie_agent_builder.raw_data.copy()
         self.condition = None
@@ -148,7 +170,9 @@ class MovieSelector():
         #Check if column_name, operatr, value valid in dataframe
         candidates=self.apply_all_filters(filter_tools)
         self.configure_sort('Average Rating', False)
-        filtered_candidates=self._select_movies(candidates)
+        filtered_candidates=self.sort_candidates(candidates) 
+        print('\033c') #Remove previous lines
+        print(filtered_candidates.to_string(index=False, max_colwidth=45))
         return filtered_candidates
     
     def _parse_filter_tools(self, filter_tools:list[str]):
@@ -164,15 +188,6 @@ class MovieSelector():
             value=filter_tools[0]
             column_name=None
         return column_name, operatr, value
-
-    def _select_movies(self, candidates:pd.DataFrame):
-        '''Based on given candidates, print and return the dataframe which has movies with their information.'''
-        sorted_candidate:pd.DataFrame=self.sort_candidates(candidates) 
-        filtered_df=sorted_candidate[~sorted_candidate['IMDBid'].isin(self.previous)]
-        self.previous.update(filtered_df['IMDBid'])
-        print('\033c') #Remove previous lines
-        print(filtered_df.to_string(index=False, max_colwidth=45))
-        return filtered_df
 
     def apply_all_filters(self, filter_tools:list[list[str]]):
         '''Unpacks filter tools and applies each filter in it manually.'''
@@ -291,16 +306,7 @@ if __name__ == '__main__':
             -Add constant backend data insertion and update,
             -Need to check validation for user filters.
             
-    ABLE TO:
-            -Load data files,
-            -Read .tsv files as pandas df object,
-            -Call on condition to limit the view of the df,
-            -Manipulate columns on the df,
-            -Filter records given arguments,
-            -Calculate advice,
-            -Externally filter and sort,
-            -Add previously loaded to memory to avoid recommendations,
-            -Recommend the top n amount of movies,'''
+    ABLE TO:'''
 
     
 
