@@ -111,11 +111,4 @@ if __name__ == "__main__":
     
     '''
     NOTE:
-            Filter logic update
-                -Add compatible CLI commands with multiple filtering in one input,
-                -Add user instruction callables,
-                -Fix unconventional and confusing callable names.
-    TODO:
-            -Need to check filtering twice. 
-                Once in ui interface for syntax good enough for splitting (which is done at applyFilterSplit)
-                Once more in main.py in applyAdvice for valid values in df.'''
+    '''

@@ -290,23 +290,9 @@ if __name__ == '__main__':
     AppManager()
     
     '''
-    NOTE:  86x faster runtime update
-
-            -Add abstraction layers,
-            -Add fully operational multi filtering,
-            -Add data load and saving for faster runtime,
-            -Fix high debugging overhead,
-            -Add better instruction prints.
-
-    TODO:   
-            -Make program less concrete (imdb data needs downloaded somehow)
-            -Sort the loaded movies with top ratings,
-            -Load random top n amount, excluding previously loaded,
-            -Add https request handling,
-            -Add constant backend data insertion and update,
-            -Need to check validation for user filters.
-            
-    ABLE TO:'''
+    NOTE:  
+    
+    '''
 
     
 
