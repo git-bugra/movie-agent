@@ -115,7 +115,7 @@ class MovieAgentBuilder():
     def _purge_data(self, movie_agent:MovieAgent):
         '''Remove excessive items with low votes, empty primary titles and genres.'''
         movie_agent.data=movie_agent.filter_rows('titleType','movie') #remove anything else than movie in records
-        movie_agent.data=movie_agent.data[(movie_agent.data['primaryTitle'].notna())&(movie_agent.data['genres'].notna())&(movie_agent.data['numVotes']>50000)] #Purge unsuitable titles
+        movie_agent.data=movie_agent.data[(movie_agent.data['primaryTitle'].notna())&(movie_agent.data['genres'].notna())&(movie_agent.data['numVotes']>5000)] #Purge unsuitable titles
         return movie_agent.data
     
 class HistoryLog():
