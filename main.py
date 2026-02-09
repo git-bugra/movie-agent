@@ -6,14 +6,14 @@ from ui.user_interface import UserInterface
 import time
 
 class MovieAgent():
-    '''Main object responsible for clearing, fixing columns and internally consume columns.\n
-    Carries data internally.'''
+    """Main object responsible for clearing, fixing columns and internally consume columns.\n
+    Carries data internally."""
     def __init__(self):
-        self.data=None
+        self.data:pd.DataFrame=pd.DataFrame()
         self.condition=None
     
     def rename_columns(self):
-        '''Make columns in imdb .tsv files more readable and intuitive'''
+        """Make columns in imdb .tsv files more readable and intuitive"""
         try:    
             self.data:pd.DataFrame=self.data.rename(columns={'tconst': 'IMDBid',
                                     'averageRating': 'Average Rating',
@@ -30,10 +30,10 @@ class MovieAgent():
         except KeyError as e: raise KeyError(f"Column not found to rename: {e}") from e
 
     def select_columns(self, *args:str):
-        '''Internal limitation the data with given columns.
+        """Internal limitation the data with given columns.
         Call data to be mutated with given arguments.
-        
-        *args: Names of the columns to limit'''
+
+        *args: Names of the columns to limit"""
         columns_to_limit=[*args]
         if len(columns_to_limit)>0:self.condition=columns_to_limit
         try:self._apply_column_selection()
@@ -41,7 +41,7 @@ class MovieAgent():
         return self
 
     def _apply_column_selection(self):
-        '''Based on condition, mutate the data to display'''
+        """Based on condition, mutate the data to display"""
         if self.data is None:
             raise ValueError(f'Failed to apply condition to the file.')
         if self and self.condition:
@@ -50,14 +50,14 @@ class MovieAgent():
         return self
     
     def filter_rows(self, column:str, mask):
-        '''Remove unwanted records internally.'''
+        """Remove unwanted records internally."""
         data:pd.DataFrame
         data=self.data[self.data[column]==mask]
         return data
 
 class MovieAgentBuilder():
-    '''Orchestral class for managing callable hierarchy and the internal state of the object MovieAgent.\n
-    Orchestrates the MovieAgent object(s) only.'''
+    """Orchestral class for managing callable hierarchy and the internal state of the object MovieAgent.\n
+    Orchestrates the MovieAgent object(s) only."""
 
     def __init__(self):
         self.movie_agent_object=None
@@ -66,21 +66,21 @@ class MovieAgentBuilder():
         self._build_agent()
 
     def _build_agent(self):
-        '''Orchestrates the flow of code for easy readability.'''
+        """Orchestrates the flow of code for easy readability."""
         movie_agent=MovieAgent()
         self.load_data(movie_agent)
         self.movie_agent_object=movie_agent
 
     def load_data(self, movie_agent:MovieAgent):
-        '''Setup imdb data and call on files to be modified'''
+        """Setup imdb data and call on files to be modified"""
         start=time.time()
         if pl.Path.exists(self.preprocessed_path):
             movie_agent.data=pd.read_parquet(self.preprocessed_path)
         else:
             title_imr=pl.Path(__file__).parent / 'data' / 'imdb.title.ratings.tsv' #imr=id, metadata, rating
             title_basics=pl.Path(__file__).parent / 'data' / 'imdb.title.basics.tsv' #
-            title_basics_df=self.read_tsv_file(title_basics)
-            title_imr_df=self.read_tsv_file(title_imr)
+            title_basics_df=self.read_tsv_file(str(title_basics))
+            title_imr_df=self.read_tsv_file(str(title_imr))
             movie_agent.data=self.merge_dataframes(title_imr_df,title_basics_df) #insert df to be merged
             movie_agent.data=self._purge_data(movie_agent) #retain data quality
             movie_agent.rename_columns() #rename the columns to be more intuitive
@@ -90,36 +90,39 @@ class MovieAgentBuilder():
         self.raw_data=self._copy_raw_data(movie_agent)
         return movie_agent
 
-    def merge_dataframes(self, *args:pd.DataFrame):
-        '''Merges .tsv data files. Mutates self.data.'''
+    @staticmethod
+    def merge_dataframes(*args:pd.DataFrame):
+        """Merges .tsv data files. Mutates self.data."""
         result=args[0]
         if len(args)>1:
             for i in range(1,len(args)):
                 result=result.merge(args[i],on='tconst')
         return result
 
-    def read_tsv_file(self, path: str):
-        '''Read TSV file from given path'''
+    @staticmethod
+    def read_tsv_file(path: str):
+        """Read TSV file from given path"""
         path=pl.Path(path)
         try:
-            readTSV=pd.read_csv(path, delimiter='\t') #Read file
+            read_tsv=pd.read_csv(path, delimiter='\t') #Read file
         except Exception as e:
             raise IOError(f"Failed to read CSV: {e}") from e
-        return readTSV
+        return read_tsv
 
     def _copy_raw_data(self, movie_agent:MovieAgent):
-        '''Copies the raw data of movieAgent object's df'''
+        """Copies the raw data of movieAgent object's df"""
         self.raw_data=movie_agent.data
         return self.raw_data
 
-    def _purge_data(self, movie_agent:MovieAgent):
-        '''Remove excessive items with low votes, empty primary titles and genres.'''
+    @staticmethod
+    def _purge_data(movie_agent:MovieAgent)->pd.DataFrame:
+        """Remove excessive items with low votes, empty primary titles and genres."""
         movie_agent.data=movie_agent.filter_rows('titleType','movie') #remove anything else than movie in records
         movie_agent.data=movie_agent.data[(movie_agent.data['primaryTitle'].notna())&(movie_agent.data['genres'].notna())&(movie_agent.data['numVotes']>5000)] #Purge unsuitable titles
         return movie_agent.data
     
 class HistoryLog():
-    '''Record, save locally and check previously recommended movies with IMDBid and timestamp.'''
+    """Record, save locally and check previously recommended movies with IMDBid and timestamp."""
     
     def __init__(self, candidates:pd.DataFrame):
         self.history_path=pl.Path(__file__).parent / 'data' / 'previously_rec.csv'
@@ -140,17 +143,17 @@ class HistoryLog():
             return False
     
     def _save_current_recommended(self, ):
-        ''''''
+        """"""
 
     def _check_previously_recommended(self, candidates:pd.DataFrame):
-        ''''''
+        """"""
 
-class MovieSelector():
-    '''Class that internally selects and stores selected movies after user filter is applied.\n
-    Carries MovieAgent dataframe and MovieAgentBuilder raw_data internally'''
-    def __init__(self, movie_agent_builder:MovieAgentBuilder, filter_tools:list[str]):
-        '''Requires movieAgentBuilder object to initialize
-        filter_tools: column_name, operatr, value to be filtered'''
+class MovieSelector:
+    """Class that internally selects and stores selected movies after user filter is applied.\n
+    Carries MovieAgent dataframe and MovieAgentBuilder raw_data internally"""
+    def __init__(self, movie_agent_builder:MovieAgentBuilder, filter_tools:list[list[str]]):
+        """Requires movieAgentBuilder object to initialize
+        filter_tools: column_name, operatr, value to be filtered"""
         self.randomizer=random.Random()
         self.df=movie_agent_builder.movie_agent_object.data.copy()
         self.raw_data=movie_agent_builder.raw_data.copy()
@@ -163,10 +166,10 @@ class MovieSelector():
         self.candidates=self.get_movies(filter_tools)
 
     def get_movies(self, filter_tools:list[list[str]]):
-        '''Retrieve list of movies with user filter applied.\n
+        """Retrieve list of movies with user filter applied.\n
         n: number of movie recommendation\n
         filter_tools: Filter params: column_name, operator, value such as: Average Rating, >, 7
-        '''
+        """
         #Check if column_name, operatr, value valid in dataframe
         candidates=self.apply_all_filters(filter_tools)
         self.configure_sort('Average Rating', False)
@@ -175,9 +178,10 @@ class MovieSelector():
         print(filtered_candidates.to_string(index=False, max_colwidth=45))
         return filtered_candidates
     
-    def _parse_filter_tools(self, filter_tools:list[str]):
-        '''Based on the argument length, assign variables to apply filters.
-        This is needed for allowing user to type in titles and genres without explicit operations.'''
+    @staticmethod
+    def _parse_filter_tools(filter_tools:list[str]):
+        """Based on the argument length, assign variables to apply filters.
+        This is needed for allowing user to type in titles and genres without explicit operations."""
         operatr=None
         if len(filter_tools)==3:
             column_name, operatr, value=filter_tools
@@ -187,10 +191,12 @@ class MovieSelector():
         elif len(filter_tools)==1:
             value=filter_tools[0]
             column_name=None
+        else:
+            return False
         return column_name, operatr, value
 
     def apply_all_filters(self, filter_tools:list[list[str]]):
-        '''Unpacks filter tools and applies each filter in it manually.'''
+        """Unpacks filter tools and applies each filter in it manually."""
         candidates=self.df
         for filters in filter_tools:
             column_name, operatr, value=self._parse_filter_tools(filters)
@@ -199,7 +205,7 @@ class MovieSelector():
         return candidates
 
     def apply_filter(self, column_name:str, operatr:str, value:str):
-        '''Apply appropiate value as filter to column_name.'''
+        """Apply appropriate value as filter to column_name."""
         value=self._convert_value(column_name, value)
         if column_name == 'Primary Title' or column_name == 'Genre':candidates=self.df[self._build_filter_condition(column_name, operatr, value, True)] #check for genre to make filter more inclusive.
         else:
@@ -209,14 +215,14 @@ class MovieSelector():
         return candidates
     
     def _store_condition(self, condition:pd.Series):
-        '''Store condition property for filterization'''
+        """Store condition property for filterization"""
         if condition is None:
             self.condition=None
         else:
             self.condition=condition
     
     def _convert_value(self, column_name:str, value:str):
-        '''Convert value if applicable to its column's value type.'''
+        """Convert value if applicable to its column's value type."""
         new_value=value
         if column_name is None:
             return value
@@ -229,8 +235,8 @@ class MovieSelector():
         return new_value
 
     def _build_filter_condition(self, column_name:str, operator:str, value:str):
-        '''Build pandas condition based on column, operator, and value\n
-        contains: Movies tend to have more than one genre. To avoid fixed listing, you can set this setting to true to for instance: your horror movie search includes movies that have horror and action etc.'''
+        """Build pandas condition based on column, operator, and value\n
+        contains: Movies tend to have more than one genre. To avoid fixed listing, you can set this setting to true to for instance: your horror movie search includes movies that have horror and action etc."""
         if operator is not None:
             condition=self.df[self.column_map[column_name.lower()]]
             if operator == ">":
@@ -251,7 +257,7 @@ class MovieSelector():
         return condition
     
     def _build_string_condition(self, column_name:str, value):
-        '''Helper function that checks data for broader string matches, not exact.'''
+        """Helper function that checks data for broader string matches, not exact."""
         if column_name is not None: #User is given two strings
             condition=self.df[self.column_map[column_name.lower()]].str.lower().str.contains(value)
         else: #User is given single string
@@ -262,12 +268,12 @@ class MovieSelector():
         return condition
     
     def configure_sort(self, column:str, ascend=True):
-        '''Set sort properties of MoviePicker object based on column parameter.'''
+        """Set sort properties of MoviePicker object based on column parameter."""
         self.sort_ascending=ascend
         self.sort_column=column
 
     def sort_candidates(self, candidates:pd.DataFrame):
-        '''Apply sorting properties with respect to candidates parameter.'''
+        """Apply sorting properties with respect to candidates parameter."""
         if self.sort_column is not None:
             sorted_candidates=candidates.sort_values(self.sort_column, ascending=self.sort_ascending)
         else:
@@ -275,7 +281,7 @@ class MovieSelector():
         return sorted_candidates
 
 class AppManager():
-    '''Main orchestrator that assembles necessary classes and communication.'''
+    """Main orchestrator that assembles necessary classes and communication."""
     
     def __init__(self):
         self.builder=MovieAgentBuilder()
