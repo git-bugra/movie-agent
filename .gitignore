@@ -8,3 +8,4 @@ core/bayesian_algorithm.py
 
 # Local data files
 data/*.parquet
+*.tsv
