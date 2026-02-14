@@ -1,0 +1,16 @@
+{
+  "download_dir": "data/",
+  "datasets":
+  [
+    {
+      "name": "ratings",
+      "url": "https://datasets.imdbws.com/title.ratings.tsv.gz",
+      "filename": "imdb.title.ratings.tsv"
+    },
+    {
+      "name": "basics",
+      "url": "https://datasets.imdbws.com/title.basics.tsv.gz",
+      "filename": "imdb.title.basics.tsv"
+    }
+  ]
+}
