@@ -8,3 +8,9 @@ core/bayesian_algorithm.py
 
 # Local data files
 data/*.parquet
+data/*.tsv
+
+# Vim
+*.un~
+*.swp
+*.swo
