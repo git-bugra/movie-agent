@@ -64,6 +64,19 @@ document.getElementById('login-btn').addEventListener('click', function() {
         });
 });
 
+function forceLogout() {
+    token = null;
+    refreshToken = null;
+    currentUsername = null;
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('username');
+    document.getElementById('user-bar').classList.add('hidden');
+    document.getElementById('username-display').textContent = '';
+    document.getElementById('filter-section').classList.add('hidden');
+    document.getElementById('auth-section').classList.remove('hidden');
+    document.getElementById('results-section').innerHTML = '<p class="empty-state">Your recommendations will appear here.</p>';
+}
+
 function authFetch(url, options) {
     options.headers = options.headers || {};
     options.headers['Authorization'] = 'Bearer ' + token;
@@ -77,7 +90,13 @@ function authFetch(url, options) {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({refresh_token: refreshToken})
         })
-        .then(refreshResponse => refreshResponse.json())
+        .then(refreshResponse => {
+            if (!refreshResponse.ok) {
+                forceLogout();
+                throw new Error('Session expired. Please log in again.');
+            }
+            return refreshResponse.json();
+        })
         .then(refreshData => {
             token = refreshData.access_token;
             options.headers['Authorization'] = 'Bearer ' + token;
@@ -95,8 +114,15 @@ window.addEventListener('load', function() {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({refresh_token: savedRefreshToken})
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            forceLogout();
+            return null;
+        }
+        return response.json();
+    })
     .then(data => {
+        if (!data) return;
         token = data.access_token;
         refreshToken = savedRefreshToken;
         currentUsername = localStorage.getItem('username');
@@ -104,6 +130,9 @@ window.addEventListener('load', function() {
         document.getElementById('username-display').textContent = 'Signed in as ' + currentUsername;
         document.getElementById('auth-section').classList.add('hidden');
         document.getElementById('filter-section').classList.remove('hidden');
+    })
+    .catch(function() {
+        forceLogout();
     });
 });
 
@@ -113,16 +142,9 @@ document.getElementById('logout-btn').addEventListener('click', function() {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({refresh_token: refreshToken})
     })
-    .then(() => {
-        token = null;
-        refreshToken = null;
-        currentUsername = localStorage.getItem('username');
-        localStorage.removeItem('refreshToken');
-        document.getElementById('user-bar').classList.add('hidden');
-        document.getElementById('username-display').textContent = '';
-        document.getElementById('filter-section').classList.add('hidden');
-        document.getElementById('auth-section').classList.remove('hidden');
-        document.getElementById('results-section').innerHTML = '<p class="empty-state">Your recommendations will appear here.</p>';
+    .catch(function() { /* ignore network errors, log out locally regardless */ })
+    .then(function() {
+        forceLogout();
     });
 });
 
@@ -227,5 +249,10 @@ document.getElementById('recommend-btn').addEventListener('click', function() {
             card.appendChild(meta);
             resultsSection.appendChild(card);
         });
+    })
+    .catch(function(err) {
+        // If the session expired, authFetch already called forceLogout()
+        // and switched the UI back to the login screen; nothing else to do here.
+        console.error(err);
     });
 });
