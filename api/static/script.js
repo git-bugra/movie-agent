@@ -1,6 +1,7 @@
 let token = null;
 let refreshToken = null;
 let currentUsername = null;
+let authMode = 'login'; // 'login' or 'register' -- purely a frontend view state, does not change what gets sent to the server
 const genres = ["action", "adventure", "animation", "biography", "comedy", "crime", "documentary", "drama", "family", "fantasy", "film-noir", "history", "horror", "music", "musical", "mystery", "romance", "sci-fi", "sport", "thriller", "war", "western"]
 const container = document.getElementById('genre-container');
 
@@ -75,7 +76,33 @@ function forceLogout() {
     document.getElementById('filter-section').classList.add('hidden');
     document.getElementById('auth-section').classList.remove('hidden');
     document.getElementById('results-section').innerHTML = '<p class="empty-state">Your recommendations will appear here.</p>';
+    exitRegisterMode();
 }
+
+function enterRegisterMode() {
+    authMode = 'register';
+    document.getElementById('register-extra-fields').classList.remove('hidden');
+    document.getElementById('login-btn').classList.add('hidden');
+    document.getElementById('register-btn').textContent = 'Create Account';
+    document.getElementById('back-to-login').classList.remove('hidden');
+    document.getElementById('auth-error').classList.add('hidden');
+}
+
+function exitRegisterMode() {
+    authMode = 'login';
+    document.getElementById('register-extra-fields').classList.add('hidden');
+    document.getElementById('login-btn').classList.remove('hidden');
+    document.getElementById('register-btn').textContent = 'Register';
+    document.getElementById('back-to-login').classList.add('hidden');
+    document.getElementById('auth-error').classList.add('hidden');
+    document.getElementById('confirm-pw').value = '';
+    document.getElementById('email').value = '';
+}
+
+document.getElementById('back-to-login-link').addEventListener('click', function(event) {
+    event.preventDefault();
+    exitRegisterMode();
+});
 
 function authFetch(url, options) {
     options.headers = options.headers || {};
@@ -150,13 +177,30 @@ document.getElementById('logout-btn').addEventListener('click', function() {
 
 document.getElementById('pw').addEventListener('keydown', function(event) {
     if (event.key === 'Enter') {
-        document.getElementById('login-btn').click();
+        if (authMode === 'register') {
+            document.getElementById('register-btn').click();
+        } else {
+            document.getElementById('login-btn').click();
+        }
+    }
+});
+
+document.getElementById('confirm-pw').addEventListener('keydown', function(event) {
+    if (event.key === 'Enter') {
+        document.getElementById('register-btn').click();
     }
 });
 
 document.getElementById('register-btn').addEventListener('click', function(){
+    // First click just reveals the register-only fields, it doesn't hit the API.
+    if (authMode === 'login') {
+        enterRegisterMode();
+        return;
+    }
+
     const username = document.getElementById('username').value.trim().toLowerCase();
     const pw = document.getElementById('pw').value.trim();
+    const confirmPw = document.getElementById('confirm-pw').value.trim();
     const errorEl = document.getElementById('auth-error');
     const registerBtn = document.getElementById('register-btn');
 
@@ -166,8 +210,16 @@ document.getElementById('register-btn').addEventListener('click', function(){
         return;
     }
 
+    if (pw !== confirmPw) {
+        errorEl.textContent = 'Passwords do not match.';
+        errorEl.classList.remove('hidden');
+        return;
+    }
+
     registerBtn.disabled = true;
 
+    // Note: confirm-pw and email are frontend-only. The server (api.py) still only
+    // ever receives username + pw, exactly as before.
     fetch('/register', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},

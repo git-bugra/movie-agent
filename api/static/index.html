@@ -23,8 +23,15 @@
         <input type="text" id="username" placeholder="Username">
         <p class="hint-text">Lowercase letters only</p>
         <input type="password" id="pw" placeholder="Password">
+
+        <div id="register-extra-fields" class="hidden">
+            <input type="password" id="confirm-pw" placeholder="Confirm password">
+            <input type="email" id="email" placeholder="Email (optional)">
+        </div>
+
         <button id="login-btn">Login</button>
         <button id="register-btn">Register</button>
+        <p id="back-to-login" class="hidden"><a href="#" id="back-to-login-link">&larr; Back to login</a></p>
         <p id="auth-error" class="error-text hidden"></p>
     </div>
 

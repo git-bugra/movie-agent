@@ -110,6 +110,21 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 #login-btn, #recommend-btn { background: var(--accent); color: var(--bg); }
 #register-btn { margin-left: 8px; }
 
+#back-to-login {
+  margin: 12px 0 0;
+  font-size: 13px;
+}
+
+#back-to-login a {
+  color: var(--accent);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+#back-to-login a:hover {
+  text-decoration: underline;
+}
+
 #genre-container {
   display: flex;
   flex-wrap: wrap;
