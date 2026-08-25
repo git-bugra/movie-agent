@@ -16,7 +16,7 @@
 
 ## What is it?
 
-Lumen is an intelligent movie recommendation engine that filters through thousands of titles to deliver tailored suggestions, built on the public IMDb dataset, with poster artwork resolved live per recommendation via the TMDb API.
+Lumen is an intelligent movie engine that filters through thousands of titles to deliver tailored suggestions, built on the public IMDb dataset, with poster artwork resolved live per recommendation via the TMDb API.
 
 Under the hood, ratings are evaluated with a Bayesian averaging algorithm — the same methodology IMDb's own Top 250 uses, a well-supported 8.5 rated movie outranks a 9.0 backed by a handful of votes. See **Bayesian Scoring** below for the full formula.
 
